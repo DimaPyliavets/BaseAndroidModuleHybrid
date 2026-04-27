@@ -1,0 +1,14 @@
+{
+  "_comment": "⚠️ Цей файл розміщується у твоєму GitHub репозиторії за адресою з AppConfig.GITHUB_VERSION_URL",
+  "_comment2": "⚠️ Щоразу при публікації нового бандлу — оновлюй version, bundleFileName та sha256",
+
+  "version": "1.0.0",
+
+  "_bundleFileName_comment": "⚠️ Ім'я zip-архіву твого веб-бандлу у GitHub Releases",
+  "bundleFileName": "bundle-1.0.0.zip",
+
+  "_sha256_comment": "⚠️ SHA-256 хеш zip-файлу (hex). Генерувати командою: sha256sum bundle-1.0.0.zip",
+  "sha256": "REPLACE_WITH_ACTUAL_SHA256_HEX_OF_YOUR_ZIP_FILE",
+
+  "releaseNotes": "Перша версія веб-бандлу"
+}

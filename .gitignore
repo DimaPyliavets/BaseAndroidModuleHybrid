@@ -1,0 +1,44 @@
+# Gradle files
+.gradle/
+build/
+
+# IntelliJ IDEA files
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Android Studio files
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.ap_
+*.dex
+*.class
+
+# Generated files
+bin/
+gen/
+
+# Secrets & Keystores (uncomment if you want to ignore them)
+# *.jks
+# *.keystore
+# google-services.json
+
+# Log files
+*.log
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Mobile tools
+.navigation/
+
+# OS specific files
+*.swp
+*~
+executable.sh

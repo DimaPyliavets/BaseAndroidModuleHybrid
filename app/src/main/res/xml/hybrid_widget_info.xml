@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/xml/hybrid_widget_info.xml
+    Метадані AppWidget провайдера.
+
+    ⚠️ ЗМІНИТИ:
+      - minWidth / minHeight: мінімальний розмір (1 клітинка = ~40-50dp)
+      - targetCellWidth / targetCellHeight: бажана кількість клітинок (Android 12+)
+      - updatePeriodMillis: інтервал системних оновлень (мінімум 1800000 = 30хв)
+        ⚠️ Для частіших оновлень — використовуй AlarmManager або WorkManager
+      - previewLayout: замінити на власний layout превью для каталогу віджетів
+      - description: текст що бачить користувач при додаванні віджета
+-->
+<appwidget-provider
+    xmlns:android="http://schemas.android.com/apk/res/android"
+
+    android:minWidth="80dp"
+    android:minHeight="40dp"
+
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+
+    android:updatePeriodMillis="1800000"
+
+    android:initialLayout="@layout/hybrid_widget_layout"
+
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable"
+
+    android:description="@string/widget_description"
+
+    android:resizeMode="horizontal|vertical" />

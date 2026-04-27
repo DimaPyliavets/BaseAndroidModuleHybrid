@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/values/strings.xml
+    ⚠️ ЗМІНИТИ: локалізуй рядки, додай uk/strings.xml та інші мови
+-->
+<resources>
+    <!-- ⚠️ ЗМІНИТИ: назва додатка що відображається на головному екрані -->
+    <string name="app_name">Hybrid App</string>
+    <!-- ⚠️ ЗМІНИТИ: опис віджета у каталозі -->
+    <string name="widget_description">Відображає актуальні дані з додатка</string>
+</resources>

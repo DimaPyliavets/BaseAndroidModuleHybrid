@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    res/values/themes.xml
+    ⚠️ ЗМІНИТИ:
+      - Назву теми (має збігатись з android:theme у AndroidManifest.xml)
+      - colorPrimary / colorSecondary: кольори твого бренду
+      - windowBackground: колір або drawable
+-->
+<resources>
+    <style name="Theme.BaseAndroidModuleHybrid" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- ⚠️ ЗМІНИТИ: основні кольори -->
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <!-- colorPrimaryVariant is not used in Material 3 -->
+    </style>
+</resources>

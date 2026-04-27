@@ -1,0 +1,105 @@
+# ============================================================
+# gradle/libs.versions.toml — Version Catalog
+# Централізоване місце для ВСІХ версій залежностей.
+# ⚠️ Оновлюй версії тут — зміни підхоплять всі модулі.
+# ============================================================
+
+[versions]
+# --- Android / Kotlin core ---
+agp                 = "8.3.2"
+kotlin              = "1.9.23"
+ksp                 = "1.9.23-1.0.19"
+coreKtx             = "1.13.1"
+appcompat           = "1.7.0"
+material            = "1.12.0"
+
+# --- Jetpack Compose ---
+composeBom          = "2024.05.00"
+activityCompose     = "1.9.0"
+
+# --- Architecture ---
+lifecycleVmKtx      = "2.8.2"
+coroutines          = "1.8.1"
+
+# --- DI ---
+hilt                = "2.51"
+hiltNavigationCompose = "1.2.0"
+
+# --- Network ---
+okhttp              = "4.12.0"
+
+# --- WorkManager ---
+workManager         = "2.9.0"
+hiltWork            = "1.2.0"
+
+# --- Room ---
+room                = "2.6.1"
+
+# --- Glance (Widget) ---
+glance              = "1.0.0"
+
+# --- Security ---
+securityCrypto      = "1.1.0-alpha06"
+
+# --- Test ---
+junit               = "4.13.2"
+junitExt            = "1.1.5"
+espresso            = "3.5.1"
+
+[libraries]
+# Core
+core-ktx            = { group = "androidx.core",    name = "core-ktx",            version.ref = "coreKtx" }
+appcompat           = { group = "androidx.appcompat",name = "appcompat",           version.ref = "appcompat" }
+material            = { group = "com.google.android.material", name = "material",  version.ref = "material" }
+
+# Compose
+compose-bom         = { group = "androidx.compose",  name = "compose-bom",         version.ref = "composeBom" }
+compose-ui          = { group = "androidx.compose.ui",name = "ui" }
+compose-material3   = { group = "androidx.compose.material3", name = "material3" }
+compose-runtime     = { group = "androidx.compose.runtime", name = "runtime" }
+compose-tooling     = { group = "androidx.compose.ui",name = "ui-tooling-preview" }
+activity-compose    = { group = "androidx.activity", name = "activity-compose",    version.ref = "activityCompose" }
+
+# ViewModel / Lifecycle
+lifecycle-vm-ktx    = { group = "androidx.lifecycle",name = "lifecycle-viewmodel-ktx", version.ref = "lifecycleVmKtx" }
+lifecycle-runtime   = { group = "androidx.lifecycle",name = "lifecycle-runtime-ktx",   version.ref = "lifecycleVmKtx" }
+
+# Coroutines
+coroutines-android  = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+
+# Hilt
+hilt-android        = { group = "com.google.dagger", name = "hilt-android",        version.ref = "hilt" }
+hilt-compiler       = { group = "com.google.dagger", name = "hilt-compiler",       version.ref = "hilt" }
+hilt-nav-compose    = { group = "androidx.hilt",     name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
+hilt-work           = { group = "androidx.hilt",     name = "hilt-work",           version.ref = "hiltWork" }
+hilt-ext-compiler   = { group = "androidx.hilt",     name = "hilt-compiler",       version.ref = "hiltWork" }
+
+# OkHttp
+okhttp              = { group = "com.squareup.okhttp3", name = "okhttp",           version.ref = "okhttp" }
+
+# WorkManager
+work-runtime-ktx    = { group = "androidx.work",     name = "work-runtime-ktx",   version.ref = "workManager" }
+
+# Room
+room-runtime        = { group = "androidx.room",     name = "room-runtime",       version.ref = "room" }
+room-ktx            = { group = "androidx.room",     name = "room-ktx",           version.ref = "room" }
+room-compiler       = { group = "androidx.room",     name = "room-compiler",      version.ref = "room" }
+
+# Glance
+glance-appwidget    = { group = "androidx.glance",   name = "glance-appwidget",   version.ref = "glance" }
+glance-material3    = { group = "androidx.glance",   name = "glance-material3",   version.ref = "glance" }
+
+# Security
+security-crypto     = { group = "androidx.security", name = "security-crypto",    version.ref = "securityCrypto" }
+
+# Test
+junit               = { group = "junit",             name = "junit",              version.ref = "junit" }
+junit-ext           = { group = "androidx.test.ext", name = "junit",              version.ref = "junitExt" }
+espresso            = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+
+[plugins]
+android-application = { id = "com.android.application",           version.ref = "agp" }
+android-library     = { id = "com.android.library",               version.ref = "agp" }
+kotlin-android      = { id = "org.jetbrains.kotlin.android",      version.ref = "kotlin" }
+ksp                 = { id = "com.google.devtools.ksp",           version.ref = "ksp" }
+hilt                = { id = "com.google.dagger.hilt.android",    version.ref = "hilt" }

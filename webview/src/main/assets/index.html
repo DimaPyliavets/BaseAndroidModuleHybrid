@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <!--
+    ⚠️ ЗМІНИТИ: назву додатка та опис
+  -->
+  <title>Hybrid App</title>
+  <style>
+    /* ⚠️ ЗМІНИТИ: замінити на свій CSS або підключити CSS файл з бандлу */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #1a1a1a;
+      padding: 16px;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 8px; }
+    p  { font-size: 0.95rem; color: #555; margin-bottom: 16px; }
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      background: #6200ee;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-bottom: 8px;
+      display: block;
+      width: 100%;
+    }
+    button:active { opacity: 0.8; }
+    #log {
+      margin-top: 16px;
+      padding: 12px;
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+      font-size: 0.85rem;
+      min-height: 60px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      background: #e8f5e9;
+      color: #2e7d32;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🔗 Hybrid App</h1>
+  <!-- ⚠️ ЗМІНИТИ: версію та інформацію -->
+  <span class="badge" id="status">Перевірка bridge...</span>
+  <p>Це приклад веб-бандлу що завантажується динамічно з GitHub.<br>
+     Замінити цей файл на свій SPA/PWA бандл.</p>
+
+  <!-- ─── Кнопки для тестування Bridge ────────────────────────────── -->
+  <button onclick="testNotification()">📣 Показати сповіщення</button>
+  <button onclick="testSyncData()">🔄 Синхронізувати дані (Widget)</button>
+  <button onclick="testLocale()">🌐 Отримати локаль</button>
+  <button onclick="testVersion()">ℹ️ Версія додатка</button>
+
+  <div id="log">Лог викликів Bridge...</div>
+
+  <script>
+    /**
+     * ⚠️ ЗМІНИТИ: "Android" — має збігатися з AppConfig.JS_BRIDGE_NAME у Kotlin
+     * Якщо змінюєш ім'я bridge — зміни й тут, і у AppConfig.kt
+     */
+    const BRIDGE_NAME = "Android";
+
+    // ─── Перевірка наявності Bridge при завантаженні ──────────────
+    window.addEventListener("DOMContentLoaded", () => {
+      const statusEl = document.getElementById("status");
+      if (typeof window[BRIDGE_NAME] !== "undefined") {
+        statusEl.textContent = "✅ Bridge підключений";
+        statusEl.style.background = "#e8f5e9";
+        statusEl.style.color = "#2e7d32";
+      } else {
+        statusEl.textContent = "⚠️ Bridge недоступний (браузер?)";
+        statusEl.style.background = "#fff3e0";
+        statusEl.style.color = "#e65100";
+      }
+    });
+
+    // ─── Утиліта логування ────────────────────────────────────────
+    function log(msg) {
+      const el = document.getElementById("log");
+      el.textContent = new Date().toLocaleTimeString() + ": " + msg + "\n" + el.textContent;
+    }
+
+    /**
+     * Показати нативне сповіщення.
+     * ⚠️ ЗМІНИТИ: заголовок та текст відповідно до UX
+     */
+    function testNotification() {
+      if (typeof window[BRIDGE_NAME] !== "undefined") {
+        window[BRIDGE_NAME].showNotification(
+          "Тестове сповіщення",           // ⚠️ ЗМІНИТИ: заголовок
+          "Привіт з веб-частини! 👋"      // ⚠️ ЗМІНИТИ: текст
+        );
+        log("showNotification() викликано");
+      } else {
+        log("Bridge недоступний");
+      }
+    }
+
+    /**
+     * Передати дані для оновлення Widget.
+     * ⚠️ ЗМІНИТИ: структуру JSON відповідно до WidgetDataEntity полів
+     */
+    function testSyncData() {
+      if (typeof window[BRIDGE_NAME] !== "undefined") {
+        const payload = JSON.stringify({
+          title:    "Оновлено з WebView",          // ⚠️ ЗМІНИТИ
+          subtitle: new Date().toLocaleString(),   // ⚠️ ЗМІНИТИ
+          value:    "42"                           // ⚠️ ЗМІНИТИ або видалити
+        });
+        window[BRIDGE_NAME].syncData(payload);
+        log("syncData() викликано: " + payload);
+      } else {
+        log("Bridge недоступний");
+      }
+    }
+
+    /**
+     * Отримати поточну локаль пристрою.
+     */
+    function testLocale() {
+      if (typeof window[BRIDGE_NAME] !== "undefined") {
+        const locale = window[BRIDGE_NAME].getDeviceLocale();
+        log("getDeviceLocale() = " + locale);
+      } else {
+        // Fallback для тестування у браузері
+        log("Locale (fallback): " + navigator.language);
+      }
+    }
+
+    /**
+     * Отримати версію нативного додатка.
+     */
+    function testVersion() {
+      if (typeof window[BRIDGE_NAME] !== "undefined") {
+        const version = window[BRIDGE_NAME].getAppVersion();
+        log("getAppVersion() = " + version);
+      } else {
+        log("Bridge недоступний");
+      }
+    }
+
+    /**
+     * ⚠️ ЗМІНИТИ / РОЗШИРИТИ: додай свою бізнес-логіку SPA тут або підключи
+     * зібраний JS-бандл (React/Vue/Angular):
+     * <script src="./app.bundle.js"><\/script>
+     *
+     * Приклад взаємодії з React компонентом:
+     * document.addEventListener('DOMContentLoaded', () => {
+     *   ReactDOM.render(<App bridge={window.Android} />, document.getElementById('root'));
+     * });
+     */
+  </script>
+</body>
+</html>
