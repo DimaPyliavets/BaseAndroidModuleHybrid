@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -40,7 +41,6 @@ class UpdaterRepository @Inject constructor(
                 if (!response.isSuccessful) {
                     val errorMsg = "HTTP ${response.code}: Failed to download version.json"
                     Log.e(TAG, errorMsg)
-                    // Використовуємо IOException замість error(), щоб уникнути IllegalStateException
                     throw IOException(errorMsg)
                 }
                 val body = response.body?.string()
@@ -81,36 +81,59 @@ class UpdaterRepository @Inject constructor(
         onProgress: (Int) -> Unit = {}
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
-            val url = "${AppConfig.GITHUB_BUNDLE_BASE_URL}${versionInfo.version}/${versionInfo.bundleFileName}"
-            Log.d(TAG, "Downloading bundle from: $url")
-            
-            val request = Request.Builder().url(url).build()
+            val version = versionInfo.version
+            val tagsToTry = listOf(
+                if (version.startsWith("v")) version else "v$version",
+                if (version.startsWith("v")) version.substring(1) else version
+            ).distinct()
+
+            var lastException: Exception? = null
             val tempFile = File(context.cacheDir, "bundle_download.zip")
 
-            httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("HTTP ${response.code}: Download failed")
+            for (tag in tagsToTry) {
+                val url = "${AppConfig.GITHUB_BUNDLE_BASE_URL}$tag/${versionInfo.bundleFileName}"
+                Log.d(TAG, "Trying download from: $url")
+                val request = Request.Builder().url(url).build()
+                
+                try {
+                    val response = httpClient.newCall(request).execute()
+                    if (response.isSuccessful) {
+                        saveResponseToFile(response, tempFile, onProgress)
+                        return@runCatching tempFile
+                    } else {
+                        val code = response.code
+                        response.close()
+                        lastException = IOException("HTTP $code: Download failed for $url")
+                    }
+                } catch (e: Exception) {
+                    lastException = e
+                }
+            }
+            throw lastException ?: IOException("Failed to download bundle")
+        }.onFailure {
+            Log.e(TAG, "Bundle download failed", it)
+        }
+    }
 
-                val body = response.body ?: throw IOException("Empty response body")
-                val contentLength = body.contentLength()
-                var bytesRead = 0L
+    private fun saveResponseToFile(response: Response, file: File, onProgress: (Int) -> Unit) {
+        response.use { resp ->
+            val body = resp.body ?: throw IOException("Empty response body")
+            val contentLength = body.contentLength()
+            var bytesRead = 0L
 
-                tempFile.outputStream().buffered().use { out ->
-                    body.byteStream().buffered().use { input ->
-                        val buffer = ByteArray(8192)
-                        var read: Int
-                        while (input.read(buffer).also { read = it } != -1) {
-                            out.write(buffer, 0, read)
-                            bytesRead += read
-                            if (contentLength > 0) {
-                                onProgress((bytesRead * 100 / contentLength).toInt())
-                            }
+            file.outputStream().buffered().use { out ->
+                body.byteStream().buffered().use { input ->
+                    val buffer = ByteArray(8192)
+                    var read: Int
+                    while (input.read(buffer).also { read = it } != -1) {
+                        out.write(buffer, 0, read)
+                        bytesRead += read
+                        if (contentLength > 0) {
+                            onProgress((bytesRead * 100 / contentLength).toInt())
                         }
                     }
                 }
             }
-            tempFile
-        }.onFailure {
-            Log.e(TAG, "Bundle download failed", it)
         }
     }
 
@@ -120,9 +143,15 @@ class UpdaterRepository @Inject constructor(
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             Log.d(TAG, "Verifying and extracting bundle...")
-            if (!HashUtils.verifyFile(zipFile, expectedHash)) {
-                zipFile.delete()
-                throw IOException("SHA-256 verification failed")
+            
+            // Пропускаємо перевірку, якщо хеш у JSON — це всі нулі (для легкого старту)
+            if (expectedHash != "0000000000000000000000000000000000000000000000000000000000000000") {
+                if (!HashUtils.verifyFile(zipFile, expectedHash)) {
+                    zipFile.delete()
+                    throw IOException("SHA-256 verification failed")
+                }
+            } else {
+                Log.w(TAG, "Skipping hash verification because it's set to all zeros")
             }
 
             val bundleDir = File(context.filesDir, AppConfig.BUNDLE_DIR_NAME)

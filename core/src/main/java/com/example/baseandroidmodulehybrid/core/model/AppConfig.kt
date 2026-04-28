@@ -9,11 +9,11 @@ object AppConfig {
     // ⚠️ ПЕРЕВІРТЕ: чи репозиторій публічний і чи гілка називається 'main'
     // Якщо файл не знайдено (404), спробуйте відкрити це посилання в браузері.
     const val GITHUB_VERSION_URL =
-        "https://raw.githubusercontent.com/DimaPyliavets/BaseAndroidModuleHybrid/refs/heads/main/webview/src/main/assets/version.json?token=GHSAT0AAAAAAD2EVIUDANDUTNGHPB4FS22A2PQORRQ"
+        "https://raw.githubusercontent.com/DimaPyliavets/BaseAndroidModuleHybrid/refs/heads/main/webview/src/main/assets/version.json"
 
     // Базовий URL для завантаження бандлів (релізів)
     const val GITHUB_BUNDLE_BASE_URL =
-        "https://github.com/DimaPyliavets/BaseAndroidModuleHybrid/releases/download/"
+        "https://github.com/DimaPyliavets/BaseAndroidModuleHybrid/blob/main/webview/src/main/assets/"
 
     // ─── Локальне зберігання ──────────────────────────────────────────
     const val BUNDLE_DIR_NAME    = "web_bundle"
