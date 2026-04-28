@@ -1,66 +1,113 @@
-:root {
-  --primary: #6750a4;
-}
-
 body {
   margin: 0;
   font-family: system-ui;
-  background: #0f0f10;
+  background: #050a14;
   color: white;
 }
 
-#app {
-  padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+.app {
+  padding: 20px;
 }
+
+.screen {
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+/* Progress */
+
+.progress-wrapper {
+  position: relative;
+  width: 220px;
+  margin: 40px auto;
+}
+
+svg {
+  transform: rotate(-90deg);
+}
+
+circle {
+  fill: none;
+  stroke-width: 12;
+}
+
+.bg {
+  stroke: #1e2430;
+}
+
+.progress {
+  stroke: gold;
+  stroke-linecap: round;
+  stroke-dasharray: 565;
+  stroke-dashoffset: 565;
+  transition: stroke-dashoffset 0.4s ease;
+}
+
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.progress-text span {
+  font-size: 42px;
+}
+
+.progress-text small {
+  display: block;
+  opacity: 0.6;
+}
+
+/* Buttons */
+
+.btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 20px;
+  border: none;
+  margin-top: 16px;
+  font-size: 16px;
+}
+
+.primary {
+  background: linear-gradient(90deg, orange, gold);
+  color: black;
+}
+
+.secondary {
+  background: #1e2430;
+  color: white;
+}
+
+/* History */
 
 .card {
-  background: #1c1c1f;
-  border-radius: 28px;
+  background: #1e2430;
   padding: 16px;
-  margin-bottom: 16px;
+  border-radius: 20px;
+  margin-top: 12px;
 }
 
-.bottom-nav {
+/* Nav */
+
+.nav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 64px;
+  height: 70px;
   display: flex;
   justify-content: space-around;
-  background: #1c1c1f;
+  background: #111827;
 }
 
-.bottom-nav button {
+.nav button {
   background: none;
   border: none;
   color: white;
-  font-size: 20px;
-}
-
-.bottom-nav button.active {
-  color: var(--primary);
-}
-
-button {
-  background: var(--primary);
-  border: none;
-  padding: 12px;
-  border-radius: 16px;
-  color: white;
-  margin: 8px 0;
-}
-
-video {
-  width: 100%;
-  border-radius: 16px;
-}
-
-.fade {
-  animation: fade 0.2s ease;
-}
-
-@keyframes fade {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
 }

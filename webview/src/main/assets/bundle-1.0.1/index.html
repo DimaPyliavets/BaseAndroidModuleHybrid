@@ -1,31 +1,56 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Device Health Checker</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>Limit App</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-  <link rel="manifest" href="manifest.json" />
+  <body>
+    <div class="app">
+      <div id="screen-limit" class="screen active">
+        <h1>Today</h1>
 
-  <!-- Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+        <div class="progress-wrapper">
+          <svg width="220" height="220">
+            <circle cx="110" cy="110" r="90" class="bg" />
+            <circle
+              cx="110"
+              cy="110"
+              r="90"
+              class="progress"
+              id="progressCircle"
+            />
+          </svg>
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="styles.css" />
-</head>
+          <div class="progress-text">
+            <span id="value">0</span>
+            <small id="limitText">of 20</small>
+          </div>
+        </div>
 
-<body>
-  <div id="app">
-    <div id="content"></div>
+        <button class="btn primary" onclick="setLimit()">
+          Set Daily Limit
+        </button>
+        <button class="btn secondary" onclick="useOne()">Use −1</button>
+      </div>
 
-    <nav class="bottom-nav">
-      <button data-tab="camera">📷</button>
-      <button data-tab="audio">🔊</button>
-      <button data-tab="notifications">🔔</button>
-      <button data-tab="sensors">📊</button>
-    </nav>
-  </div>
+      <div id="screen-history" class="screen">
+        <h1>Activity</h1>
 
-  <script src="app.js"></script>
-</body>
+        <div id="history"></div>
+      </div>
+
+      <nav class="nav">
+        <button onclick="switchTab('limit')" id="nav-limit">Limit</button>
+        <button onclick="switchTab('history')" id="nav-history">History</button>
+      </nav>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
 </html>

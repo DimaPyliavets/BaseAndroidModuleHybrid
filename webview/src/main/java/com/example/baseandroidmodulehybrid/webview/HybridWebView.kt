@@ -1,12 +1,13 @@
 package com.example.baseandroidmodulehybrid.webview
 
 import android.util.Log
+import android.webkit.PermissionRequest
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,7 +29,7 @@ fun HybridWebView(
         webViewConfig.resolveStartUrl(localBundlePath)
     }
 
-    Log.d("HybridWebView", "Loading URL: $startUrl (Bundle: $localBundlePath)")
+    Log.d("HybridWebView", "Loading URL: $startUrl")
 
     AndroidView(
         modifier = modifier,
@@ -36,9 +37,16 @@ fun HybridWebView(
             WebView(ctx).apply {
                 webViewConfig.configureSettings(settings)
                 addJavascriptInterface(bridge, AppConfig.JS_BRIDGE_NAME)
+                
+                // Дозволяємо доступ до заліза (камера, мікрофон)
+                webChromeClient = object : WebChromeClient() {
+                    override fun onPermissionRequest(request: PermissionRequest) {
+                        request.grant(request.resources)
+                    }
+                }
+
                 webViewClient = HybridWebViewClient(assetLoader)
                 
-                // Якщо завантажуємо локальний бандл, очищуємо кеш
                 if (localBundlePath != null) {
                     clearCache(true)
                 }
@@ -47,9 +55,7 @@ fun HybridWebView(
             }
         },
         update = { webView ->
-            // Якщо URL змінився (наприклад, після оновлення), завантажуємо новий
             if (webView.url != startUrl) {
-                Log.d("HybridWebView", "Updating WebView URL to: $startUrl")
                 webView.clearCache(true)
                 webView.loadUrl(startUrl)
             }
@@ -66,19 +72,6 @@ private class HybridWebViewClient(
         request: WebResourceRequest
     ): WebResourceResponse? {
         return assetLoader.shouldInterceptRequest(request.url)
-    }
-
-    override fun onReceivedError(
-        view: WebView,
-        errorCode: Int,
-        description: String,
-        failingUrl: String
-    ) {
-        super.onReceivedError(view, errorCode, description, failingUrl)
-        Log.e("HybridWebView", "Error $errorCode: $description at $failingUrl")
-        if (errorCode == ERROR_FILE_NOT_FOUND || errorCode == ERROR_UNKNOWN) {
-             view.loadUrl("${WebViewConfig.TRUSTED_ORIGIN}${WebViewConfig.ASSETS_PATH}error.html")
-        }
     }
 
     override fun shouldOverrideUrlLoading(

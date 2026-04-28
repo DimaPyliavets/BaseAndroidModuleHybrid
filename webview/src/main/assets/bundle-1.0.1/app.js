@@ -1,165 +1,80 @@
-const content = document.getElementById("content");
-const buttons = document.querySelectorAll(".bottom-nav button");
+let value = Number(localStorage.getItem("value")) || 0;
+let limit = Number(localStorage.getItem("limit")) || 20;
+let history = JSON.parse(localStorage.getItem("history")) || [];
 
-let currentStream = null;
-let audioCtx = null;
-let oscillator = null;
+const circle = document.getElementById("progressCircle");
+const valueText = document.getElementById("value");
+const limitText = document.getElementById("limitText");
 
-buttons.forEach(btn => {
-  btn.addEventListener("click", () => {
-    buttons.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
+function updateUI() {
+  valueText.textContent = value;
+  limitText.textContent = "of " + limit;
 
-    loadTab(btn.dataset.tab);
-  });
-});
+  const percent = value / limit;
+  const offset = 565 - 565 * percent;
 
-// ---------- Tabs ----------
-
-function loadTab(tab) {
-  content.innerHTML = "";
-  content.classList.add("fade");
-
-  switch (tab) {
-    case "camera":
-      renderCamera();
-      break;
-    case "audio":
-      renderAudio();
-      break;
-    case "notifications":
-      renderNotifications();
-      break;
-    case "sensors":
-      renderSensors();
-      break;
-  }
+  circle.style.strokeDashoffset = offset;
 }
 
-// ---------- Camera ----------
+function setLimit() {
+  const newLimit = prompt("Enter limit");
+  if (!newLimit) return;
 
-function renderCamera() {
-  const card = createCard("Camera Test");
+  limit = Number(newLimit);
+  value = 0;
 
-  const btn = createButton("Enable Camera", async () => {
-    try {
-      currentStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      video.srcObject = currentStream;
-    } catch {
-      alert("Permission denied");
-    }
-  });
-
-  const video = document.createElement("video");
-  video.autoplay = true;
-  video.playsInline = true;
-
-  const capture = createButton("Capture", () => {
-    console.log("Capture simulated");
-  });
-
-  card.append(btn, video, capture);
-  content.appendChild(card);
+  save();
+  updateUI();
 }
 
-// ---------- Audio ----------
+function useOne() {
+  if (value <= 0) return;
 
-function renderAudio() {
-  const card = createCard("Speaker Test");
+  value--;
 
-  const play = (freq) => {
-    stopAudio();
-
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    oscillator = audioCtx.createOscillator();
-
-    oscillator.type = "sine";
-    oscillator.frequency.value = freq;
-
-    oscillator.connect(audioCtx.destination);
-    oscillator.start();
-  };
-
-  card.append(
-    createButton("Low", () => play(200)),
-    createButton("High", () => play(2000)),
-    createButton("Stop", stopAudio)
-  );
-
-  content.appendChild(card);
-}
-
-function stopAudio() {
-  oscillator?.stop();
-  audioCtx?.close();
-}
-
-// ---------- Notifications ----------
-
-function renderNotifications() {
-  const card = createCard("Notification Test");
-
-  const request = createButton("Request Permission", async () => {
-    await Notification.requestPermission();
+  history.push({
+    date: new Date().toLocaleDateString(),
+    value: value,
   });
 
-  const trigger = createButton("Trigger Notification", () => {
-    new Notification("Test Notification", {
-      body: "It works",
+  save();
+  updateUI();
+  renderHistory();
+}
+
+function renderHistory() {
+  const container = document.getElementById("history");
+  container.innerHTML = "";
+
+  history
+    .slice()
+    .reverse()
+    .forEach((item) => {
+      const div = document.createElement("div");
+      div.className = "card";
+
+      div.innerHTML = `
+      <div>${item.date}</div>
+      <div>${item.value} left</div>
+    `;
+
+      container.appendChild(div);
     });
-  });
-
-  card.append(request, trigger);
-  content.appendChild(card);
 }
 
-// ---------- Sensors ----------
+function switchTab(tab) {
+  document
+    .querySelectorAll(".screen")
+    .forEach((s) => s.classList.remove("active"));
 
-function renderSensors() {
-  const card = createCard("Sensor Dashboard");
-
-  const x = document.createElement("div");
-  const y = document.createElement("div");
-  const z = document.createElement("div");
-
-  window.addEventListener("devicemotion", (e) => {
-    const acc = e.accelerationIncludingGravity;
-
-    x.textContent = "X: " + acc.x.toFixed(2);
-    y.textContent = "Y: " + acc.y.toFixed(2);
-    z.textContent = "Z: " + acc.z.toFixed(2);
-  });
-
-  card.append(x, y, z);
-  content.appendChild(card);
+  document.getElementById("screen-" + tab).classList.add("active");
 }
 
-// ---------- Helpers ----------
-
-function createCard(title) {
-  const card = document.createElement("div");
-  card.className = "card";
-
-  const h = document.createElement("h2");
-  h.textContent = title;
-
-  card.appendChild(h);
-  return card;
+function save() {
+  localStorage.setItem("value", value);
+  localStorage.setItem("limit", limit);
+  localStorage.setItem("history", JSON.stringify(history));
 }
 
-function createButton(text, handler) {
-  const btn = document.createElement("button");
-  btn.textContent = text;
-  btn.onclick = handler;
-  return btn;
-}
-
-// ---------- Init ----------
-
-loadTab("camera");
-
-// ---------- Service Worker ----------
-
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js");
-}
+updateUI();
+renderHistory();

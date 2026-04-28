@@ -34,9 +34,15 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var nativeBridge: NativeBridge
 
-    private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted -> }
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val cameraGranted = permissions[Manifest.permission.CAMERA] ?: false
+        val audioGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
+        val notificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissions[Manifest.permission.POST_NOTIFICATIONS] ?: false
+        } else true
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,7 +51,7 @@ class MainActivity : ComponentActivity() {
             WebView.setWebContentsDebuggingEnabled(true)
         }
 
-        requestNotificationPermissionIfNeeded()
+        requestRequiredPermissions()
 
         lifecycleScope.launch {
             updaterViewModel.checkAndUpdate()
@@ -54,7 +60,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             val updateState by updaterViewModel.updateState.collectAsState()
             val installedBundlePath by updaterViewModel.installedBundlePath.collectAsState()
-            // Додаємо відстеження версії для примусового оновлення
             val currentVersion by updaterViewModel.currentVersion.collectAsState()
             val snackbarHostState = remember { SnackbarHostState() }
 
@@ -75,8 +80,6 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
-                    // Використовуємо комбінацію шляху та версії як ключ.
-                    // Якщо версія зміниться, WebView буде перестворено з новими файлами.
                     key(installedBundlePath, currentVersion) {
                         HybridWebView(
                             modifier = Modifier.fillMaxSize(),
@@ -145,9 +148,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun requestNotificationPermissionIfNeeded() {
+    private fun requestRequiredPermissions() {
+        val permissions = mutableListOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO
+        )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
+        requestPermissionLauncher.launch(permissions.toTypedArray())
     }
 }

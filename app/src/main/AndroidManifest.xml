@@ -1,26 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    AndroidManifest.xml
-    ⚠️ ЗМІНИТИ:
-      - package: твій реальний applicationId
-      - android:label: назва додатка що відображається користувачу
-      - android:icon / android:roundIcon: заміни на свої ресурси
-      - authorities у FileProvider: має збігатися з applicationId
--->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- ─── Дозволи ─────────────────────────────────────────────────── -->
-    <!-- Потрібен для завантаження оновлень з GitHub -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Потрібен для WorkManager offline-scheduling -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- Для показу сповіщень (API 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Для Glance Widget -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- Для планування фонових задач -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- Дозволи для камери та заліза -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FLASHLIGHT" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Оголошення функцій заліза -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.flash" android:required="false" />
 
     <application
         android:name=".HybridApp"
@@ -33,7 +32,6 @@
         android:theme="@style/Theme.BaseAndroidModuleHybrid"
         android:usesCleartextTraffic="true">
 
-        <!-- ─── Головна Activity ──────────────────────────────────────── -->
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
@@ -44,27 +42,6 @@
             </intent-filter>
         </activity>
 
-        <!-- ─── WorkManager: UpdateWorker ────────────────────────────── -->
-        <!--
-            ⚠️ ВАЖЛИВО: WorkManager реєструється автоматично через ContentProvider.
-            Якщо використовуєш кастомну ініціалізацію — додай:
-            tools:node="remove" для дефолтного WorkManagerInitializer
-        -->
-
-        <!-- ─── FileProvider для sharing файлів (якщо потрібно) ──────── -->
-        <!--
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="com.example.baseandroidmodulehybrid.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
-        -->
-
-        <!-- ─── Glance Widget Receiver ───────────────────────────────── -->
         <receiver
             android:name=".widget.HybridWidgetReceiver"
             android:exported="true">
