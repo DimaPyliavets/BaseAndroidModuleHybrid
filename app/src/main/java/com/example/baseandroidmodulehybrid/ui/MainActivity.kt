@@ -11,6 +11,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,13 +39,10 @@ class MainActivity : ComponentActivity() {
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        val cameraGranted = permissions[Manifest.permission.CAMERA] ?: false
-        val audioGranted = permissions[Manifest.permission.RECORD_AUDIO] ?: false
-        val notificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions[Manifest.permission.POST_NOTIFICATIONS] ?: false
-        } else true
+        // Permissions handled here if needed
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -62,17 +61,46 @@ class MainActivity : ComponentActivity() {
             val installedBundlePath by updaterViewModel.installedBundlePath.collectAsState()
             val currentVersion by updaterViewModel.currentVersion.collectAsState()
             val snackbarHostState = remember { SnackbarHostState() }
+            var showMenu by remember { mutableStateOf(false) }
 
             LaunchedEffect(updateState) {
-                if (updateState is UpdateState.Error) {
-                    snackbarHostState.showSnackbar((updateState as UpdateState.Error).message)
-                }
-                if (updateState is UpdateState.Success) {
-                    snackbarHostState.showSnackbar("Оновлення встановлено!")
+                when (updateState) {
+                    is UpdateState.Error -> {
+                        snackbarHostState.showSnackbar((updateState as UpdateState.Error).message)
+                    }
+                    is UpdateState.Success -> {
+                        snackbarHostState.showSnackbar("Оновлення встановлено!")
+                    }
+                    is UpdateState.UpToDate -> {
+                        snackbarHostState.showSnackbar("У вас встановлена актуальна версія")
+                    }
+                    else -> {}
                 }
             }
 
             Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text("Hybrid App") },
+                        actions = {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "Меню")
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Перевірити оновлення") },
+                                    onClick = {
+                                        showMenu = false
+                                        updaterViewModel.checkAndUpdate()
+                                    }
+                                )
+                            }
+                        }
+                    )
+                },
                 snackbarHost = { SnackbarHost(snackbarHostState) }
             ) { paddingValues ->
                 Box(
@@ -97,7 +125,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun UpdateOverlay(state: UpdateState) {
         when (state) {
-            is UpdateState.Downloading, is UpdateState.Extracting, UpdateState.Applying -> {
+            is UpdateState.Checking, is UpdateState.Downloading, is UpdateState.Extracting, UpdateState.Applying -> {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -113,6 +141,7 @@ class MainActivity : ComponentActivity() {
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             val title = when (state) {
+                                is UpdateState.Checking -> "Перевірка оновлень..."
                                 is UpdateState.Downloading -> "Завантаження оновлення"
                                 is UpdateState.Extracting -> "Встановлення..."
                                 else -> "Оновлення системи"
