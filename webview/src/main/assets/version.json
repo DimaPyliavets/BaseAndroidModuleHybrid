@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "bundleFileName": "bundle-1.0.0.zip",
+  "bundleFileName": "bundle-1.0.1.zip",
   "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
   "releaseNotes": "Початковий реліз (Sensor Tester PWA)"
 }

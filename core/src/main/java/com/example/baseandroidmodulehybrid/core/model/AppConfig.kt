@@ -6,9 +6,10 @@ package com.example.baseandroidmodulehybrid.core.model
 object AppConfig {
 
     // ─── GitHub URLs ───────────────────────────────────────────────────
-    // Оновлений шлях до вашого файлу на GitHub
+    // ⚠️ ПЕРЕВІРТЕ: чи репозиторій публічний і чи гілка називається 'main'
+    // Якщо файл не знайдено (404), спробуйте відкрити це посилання в браузері.
     const val GITHUB_VERSION_URL =
-        "https://raw.githubusercontent.com/DimaPyliavets/BaseAndroidModuleHybrid/main/webview/src/main/assets/version.json"
+        "https://raw.githubusercontent.com/DimaPyliavets/BaseAndroidModuleHybrid/refs/heads/main/webview/src/main/assets/version.json?token=GHSAT0AAAAAAD2EVIUDANDUTNGHPB4FS22A2PQORRQ"
 
     // Базовий URL для завантаження бандлів (релізів)
     const val GITHUB_BUNDLE_BASE_URL =

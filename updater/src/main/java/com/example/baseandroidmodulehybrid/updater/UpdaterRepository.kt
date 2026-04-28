@@ -13,6 +13,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
 import java.util.zip.ZipInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,12 +40,13 @@ class UpdaterRepository @Inject constructor(
                 if (!response.isSuccessful) {
                     val errorMsg = "HTTP ${response.code}: Failed to download version.json"
                     Log.e(TAG, errorMsg)
-                    error(errorMsg)
+                    // Використовуємо IOException замість error(), щоб уникнути IllegalStateException
+                    throw IOException(errorMsg)
                 }
                 val body = response.body?.string()
                 Log.d(TAG, "Received JSON: $body")
                 if (body.isNullOrBlank()) {
-                    error("Empty response from server")
+                    throw IOException("Empty response from server")
                 }
                 parseVersionInfo(body)
             }
@@ -86,9 +88,9 @@ class UpdaterRepository @Inject constructor(
             val tempFile = File(context.cacheDir, "bundle_download.zip")
 
             httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) error("HTTP ${response.code}: Download failed")
+                if (!response.isSuccessful) throw IOException("HTTP ${response.code}: Download failed")
 
-                val body = response.body ?: error("Empty response body")
+                val body = response.body ?: throw IOException("Empty response body")
                 val contentLength = body.contentLength()
                 var bytesRead = 0L
 
@@ -120,7 +122,7 @@ class UpdaterRepository @Inject constructor(
             Log.d(TAG, "Verifying and extracting bundle...")
             if (!HashUtils.verifyFile(zipFile, expectedHash)) {
                 zipFile.delete()
-                error("SHA-256 verification failed")
+                throw IOException("SHA-256 verification failed")
             }
 
             val bundleDir = File(context.filesDir, AppConfig.BUNDLE_DIR_NAME)
@@ -132,7 +134,7 @@ class UpdaterRepository @Inject constructor(
                 while (entry != null) {
                     val outFile = File(bundleDir, entry.name)
                     if (!outFile.canonicalPath.startsWith(bundleDir.canonicalPath)) {
-                        error("Zip Slip detected: ${entry.name}")
+                        throw IOException("Zip Slip detected: ${entry.name}")
                     }
 
                     if (entry.isDirectory) {
