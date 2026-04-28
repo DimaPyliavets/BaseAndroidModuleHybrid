@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Device Health Checker</title>
+
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div id="app">
+    <div id="content"></div>
+
+    <nav class="bottom-nav">
+      <button data-tab="camera">📷</button>
+      <button data-tab="audio">🔊</button>
+      <button data-tab="notifications">🔔</button>
+      <button data-tab="sensors">📊</button>
+    </nav>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
