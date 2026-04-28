@@ -1,22 +1,343 @@
 <!doctype html>
-<html lang="en">
+<html lang="uk">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes"
     />
-    <title>Limit App</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
+    <title>Межа дня | LimitKeeper</title>
+    <link rel="manifest" href="manifest.json" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
 
+      body {
+        background: radial-gradient(circle at 20% 30%, #0b1120, #030712);
+        font-family:
+          "Inter",
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          sans-serif;
+        color: #f1f5f9;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 0 80px 0;
+      }
+
+      /* головний контейнер */
+      .app {
+        max-width: 520px;
+        width: 100%;
+        margin: 0 auto;
+        background: rgba(15, 23, 42, 0.65);
+        backdrop-filter: blur(10px);
+        border-radius: 48px 48px 32px 32px;
+        box-shadow:
+          0 25px 45px -12px rgba(0, 0, 0, 0.6),
+          inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        overflow: hidden;
+        border: 1px solid rgba(255, 215, 0, 0.2);
+      }
+
+      /* екрани */
+      .screen {
+        display: none;
+        padding: 24px 20px 32px 20px;
+        animation: fadeSlide 0.25s ease-out;
+      }
+
+      .screen.active {
+        display: block;
+      }
+
+      @keyframes fadeSlide {
+        0% {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      h1 {
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: -0.3px;
+        background: linear-gradient(135deg, #fff9e6, #ffd966);
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+        margin-bottom: 6px;
+        display: inline-block;
+      }
+
+      /* прогресс коло */
+      .progress-wrapper {
+        position: relative;
+        width: 240px;
+        height: 240px;
+        margin: 20px auto;
+      }
+
+      svg {
+        transform: rotate(-90deg);
+        width: 100%;
+        height: 100%;
+      }
+
+      circle {
+        fill: none;
+        stroke-width: 14;
+        transition: stroke-dashoffset 0.55s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      }
+
+      .bg {
+        stroke: #1f2937;
+        stroke-width: 12;
+      }
+
+      .progress {
+        stroke: url(#gradCircle);
+        stroke-linecap: round;
+        stroke-dasharray: 565.48;
+        stroke-dashoffset: 565.48;
+        filter: drop-shadow(0 0 6px rgba(255, 200, 0, 0.4));
+      }
+
+      .progress-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        width: 100%;
+      }
+
+      .progress-text span {
+        font-size: 56px;
+        font-weight: 800;
+        background: linear-gradient(to bottom, #ffe5a3, #ffb347);
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+        line-height: 1;
+      }
+
+      .progress-text small {
+        display: block;
+        font-size: 15px;
+        font-weight: 500;
+        background: #334155;
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 40px;
+        margin-top: 6px;
+        backdrop-filter: blur(4px);
+        color: #e2e8f0;
+      }
+
+      /* кнопки блок */
+      .actions-group {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+
+      .btn {
+        flex: 1;
+        padding: 14px 8px;
+        border-radius: 60px;
+        font-weight: 600;
+        font-size: 16px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: #1e293b;
+        color: white;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn.primary {
+        background: linear-gradient(105deg, #ffc107, #ffb347);
+        color: #0a0c12;
+        font-weight: 700;
+        box-shadow: 0 6px 14px rgba(255, 180, 40, 0.25);
+      }
+
+      .btn.primary:active {
+        transform: scale(0.96);
+        background: #f59e0b;
+      }
+
+      .btn.secondary {
+        background: #2d3a4e;
+        border: 1px solid #ffd96650;
+      }
+
+      .btn.secondary:active {
+        background: #3b4c64;
+        transform: scale(0.96);
+      }
+
+      .btn.warning {
+        background: rgba(100, 60, 30, 0.8);
+        backdrop-filter: blur(4px);
+        border: 1px solid #ffb34760;
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        transform: none;
+        cursor: not-allowed;
+      }
+
+      /* історія */
+      .history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+      }
+
+      .clear-btn {
+        background: none;
+        border: 1px solid #ffa55940;
+        padding: 6px 16px;
+        border-radius: 40px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #facc15;
+        cursor: pointer;
+        transition: 0.15s;
+      }
+
+      .clear-btn:active {
+        background: #ffb34720;
+      }
+
+      #history {
+        max-height: 460px;
+        overflow-y: auto;
+        padding-right: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .card {
+        background: #111827cc;
+        backdrop-filter: blur(12px);
+        border-radius: 28px;
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid #facc1520;
+        transition: all 0.15s;
+      }
+
+      .card-date {
+        font-size: 15px;
+        font-weight: 500;
+        color: #cbd5e1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .card-badge {
+        background: #facc1520;
+        padding: 4px 12px;
+        border-radius: 30px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #ffd966;
+      }
+
+      /* навігація */
+      .nav {
+        position: sticky;
+        bottom: 0;
+        width: 100%;
+        background: rgba(3, 7, 18, 0.85);
+        backdrop-filter: blur(20px);
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding: 10px 0 18px;
+        border-top: 1px solid #ffd96630;
+      }
+
+      .nav button {
+        background: transparent;
+        border: none;
+        font-size: 17px;
+        font-weight: 600;
+        padding: 10px 24px;
+        border-radius: 40px;
+        color: #94a3b8;
+        transition: all 0.2s;
+        cursor: pointer;
+        letter-spacing: -0.2px;
+      }
+
+      .nav button.active-nav {
+        background: #ffd96620;
+        color: #ffda7c;
+        box-shadow:
+          inset 0 0 6px #ffbf4020,
+          0 2px 6px rgba(0, 0, 0, 0.2);
+      }
+
+      /* скрол */
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #1e293b;
+        border-radius: 10px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #ffc857;
+        border-radius: 10px;
+      }
+    </style>
+  </head>
   <body>
     <div class="app">
+      <!-- Екран ліміту / сьогодні -->
       <div id="screen-limit" class="screen active">
-        <h1>Today</h1>
-
+        <h1>📆 Сьогодні</h1>
         <div class="progress-wrapper">
-          <svg width="220" height="220">
+          <svg viewBox="0 0 220 220">
+            <defs>
+              <linearGradient
+                id="gradCircle"
+                x1="0%"
+                y1="0%"
+                x2="100%"
+                y2="100%"
+              >
+                <stop offset="0%" stop-color="#FFD966" />
+                <stop offset="100%" stop-color="#FFA500" />
+              </linearGradient>
+            </defs>
             <circle cx="110" cy="110" r="90" class="bg" />
             <circle
               cx="110"
@@ -26,31 +347,392 @@
               id="progressCircle"
             />
           </svg>
-
           <div class="progress-text">
             <span id="value">0</span>
-            <small id="limitText">of 20</small>
+            <small id="limitText">of 0</small>
           </div>
         </div>
-
-        <button class="btn primary" onclick="setLimit()">
-          Set Daily Limit
-        </button>
-        <button class="btn secondary" onclick="useOne()">Use −1</button>
+        <div class="actions-group">
+          <button class="btn primary" id="setLimitBtn">
+            ✎ Встановити ліміт
+          </button>
+          <button class="btn secondary" id="useOneBtn">
+            ➖ Використати −1
+          </button>
+          <button class="btn warning" id="resetDayBtn">⟳ Скинути день</button>
+        </div>
+        <p
+          style="
+            font-size: 13px;
+            text-align: center;
+            margin-top: 24px;
+            opacity: 0.6;
+          "
+        >
+          Кожне натискання зменшує залишок на 1
+        </p>
       </div>
 
+      <!-- Екран історії -->
       <div id="screen-history" class="screen">
-        <h1>Activity</h1>
-
+        <div class="history-header">
+          <h1>📋 Активність</h1>
+          <button id="clearHistoryBtn" class="clear-btn">
+            🗑 Очистити історію
+          </button>
+        </div>
         <div id="history"></div>
       </div>
 
+      <!-- нижня навігація -->
       <nav class="nav">
-        <button onclick="switchTab('limit')" id="nav-limit">Limit</button>
-        <button onclick="switchTab('history')" id="nav-history">History</button>
+        <button id="nav-limit" class="active-nav">Ліміт</button>
+        <button id="nav-history">Історія</button>
       </nav>
     </div>
 
-    <script src="app.js"></script>
+    <script>
+      // ======================== ОСНОВНІ ЗМІННІ ========================
+      let value = 0; // скільки залишилось (remaining)
+      let limit = 20; // денний ліміт
+
+      // Історія зберігає об'єкти: { date: string, message: string, remaining: number? }
+      let history = [];
+
+      // DOM елементи
+      const progressCircle = document.getElementById("progressCircle");
+      const valueSpan = document.getElementById("value");
+      const limitSpan = document.getElementById("limitText");
+      const historyContainer = document.getElementById("history");
+
+      // Допоміжна функція: розрахунок довжини кола (r=90 => 2*pi*90 ≈ 565.48)
+      const CIRCUMFERENCE = 2 * Math.PI * 90; // 565.48
+
+      // Функція оновлення UI (прогрес кола + текст)
+      function updateUI() {
+        // Відображаємо залишок та ліміт
+        valueSpan.innerText = value;
+        limitSpan.innerText = `із ${limit}`;
+
+        // Відсоток ВИКОРИСТАНОГО (чим більше використано, тим більше коло заповнене)
+        let used = Math.max(0, limit - value);
+        let usedPercent = limit === 0 ? 0 : used / limit;
+        // обмеження
+        usedPercent = Math.min(1, Math.max(0, usedPercent));
+        const offset = CIRCUMFERENCE - CIRCUMFERENCE * usedPercent;
+        progressCircle.style.strokeDashoffset = offset;
+
+        // Додаткова стилістика: якщо залишок = 0, змінити text
+        if (value <= 0) {
+          valueSpan.style.opacity = "0.8";
+        } else {
+          valueSpan.style.opacity = "1";
+        }
+      }
+
+      // Збереження усього в localStorage
+      function saveToLocal() {
+        localStorage.setItem("limit_app_value", value);
+        localStorage.setItem("limit_app_limit", limit);
+        localStorage.setItem("limit_app_history", JSON.stringify(history));
+      }
+
+      // Додати запис в історію (з часом та подією)
+      function addHistoryRecord(
+        actionType,
+        detail = "",
+        remainingAfter = null,
+      ) {
+        const now = new Date();
+        const formattedDate = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+        let message = "";
+        let showRemaining =
+          remainingAfter !== undefined && remainingAfter !== null
+            ? remainingAfter
+            : value;
+
+        switch (actionType) {
+          case "use":
+            message = `🔽 Використано 1 | залишок: ${showRemaining}`;
+            break;
+          case "reset":
+            message = `🔄 Скидання дня | ліміт ${limit}, залишок став ${showRemaining}`;
+            break;
+          case "limit_change":
+            message = `⚙️ Змінено ліміт: ${detail}`;
+            break;
+          case "clear_history":
+            message = `🧹 Історію очищено`;
+            break;
+          default:
+            message = detail;
+        }
+        history.unshift({
+          // нові записи зверху (щоб останні перші)
+          date: formattedDate,
+          text: message,
+          remaining: showRemaining,
+        });
+        // обмежимо довжину історії (максимум 200 записів)
+        if (history.length > 200) history.pop();
+        saveToLocal();
+        renderHistory();
+      }
+
+      // Рендер усієї історії
+      function renderHistory() {
+        if (!historyContainer) return;
+        if (history.length === 0) {
+          historyContainer.innerHTML = `<div class="card" style="justify-content:center; opacity:0.7;">✨ Ще немає активності. Використайте кнопку -1</div>`;
+          return;
+        }
+        historyContainer.innerHTML = "";
+        history.forEach((record) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+        <div class="card-date">
+          <span>🕘 ${record.date}</span>
+        </div>
+        <div class="card-badge">${record.text}</div>
+      `;
+          historyContainer.appendChild(card);
+        });
+      }
+
+      // Синхронізація даних: коректне значення value відносно limit (value ніколи > limit)
+      function clampValueByLimit() {
+        if (value > limit) value = limit;
+        if (value < 0) value = 0;
+      }
+
+      // Функція оновлення після завантаження / змін
+      function fullSyncAndRender() {
+        clampValueByLimit();
+        updateUI();
+        saveToLocal();
+      }
+
+      // ========== ОСНОВНІ ДІЇ ==========
+      // Використати 1 (зменшити залишок, якщо >0)
+      function useOne() {
+        if (value <= 0) {
+          // легке повідомлення через анімацію, можна алерт але краще без дратівливого
+          const btn = document.getElementById("useOneBtn");
+          btn.style.transform = "scale(0.96)";
+          setTimeout(() => {
+            btn.style.transform = "";
+          }, 150);
+          // показати коротке сповіщення як зворотній зв'язок але без алерту
+          const toastMsg = document.createElement("div");
+          toastMsg.innerText = "❌ Ліміт вичерпано!";
+          toastMsg.style.position = "fixed";
+          toastMsg.style.bottom = "90px";
+          toastMsg.style.left = "50%";
+          toastMsg.style.transform = "translateX(-50%)";
+          toastMsg.style.backgroundColor = "#EF4444dd";
+          toastMsg.style.padding = "8px 20px";
+          toastMsg.style.borderRadius = "40px";
+          toastMsg.style.color = "white";
+          toastMsg.style.fontWeight = "bold";
+          toastMsg.style.zIndex = "1000";
+          toastMsg.style.fontSize = "14px";
+          document.body.appendChild(toastMsg);
+          setTimeout(() => toastMsg.remove(), 1400);
+          return;
+        }
+        value--;
+        clampValueByLimit();
+        // Додаємо в історію дію "використання"
+        addHistoryRecord("use", "", value);
+        updateUI();
+        saveToLocal();
+        // мікро-вібрація якщо підтримується
+        if (navigator.vibrate) navigator.vibrate(20);
+      }
+
+      // Встановити новий ліміт (зберігаючи "використану" кількість)
+      function setNewLimit() {
+        let raw = prompt(
+          "📊 Встановіть денний ліміт (ціле число, більше 0)",
+          limit,
+        );
+        if (raw === null) return;
+        let newLimit = Number(raw);
+        if (isNaN(newLimit) || newLimit <= 0) {
+          alert("Будь ласка, введіть коректне число більше 0");
+          return;
+        }
+        // важливо: зберігаємо кількість використаних одиниць (скільки ми вже витратили)
+        const previouslyUsed = Math.max(0, limit - value);
+        // після зміни ліміту нова кількість залишку = новий ліміт - використано
+        let newRemaining = newLimit - previouslyUsed;
+        if (newRemaining < 0) newRemaining = 0;
+        // зберігаємо старі значення для повідомлення
+        const oldLimit = limit;
+        limit = newLimit;
+        value = newRemaining;
+        clampValueByLimit();
+        fullSyncAndRender();
+        addHistoryRecord(
+          "limit_change",
+          `${oldLimit} → ${newLimit} (використано: ${previouslyUsed})`,
+          value,
+        );
+        updateUI();
+        // перевірка zero value
+        if (value === 0 && limit > 0) {
+          // опціонально легке попередження
+        }
+      }
+
+      // Скидання дня (відновлює залишок до повного ліміту, не змінюючи ліміт)
+      function resetDay() {
+        const oldRemaining = value;
+        value = limit;
+        clampValueByLimit();
+        updateUI();
+        saveToLocal();
+        addHistoryRecord(
+          "reset",
+          `було ${oldRemaining} → стало ${value}`,
+          value,
+        );
+        // легкий фідбек
+        const resetMsg = document.createElement("div");
+        resetMsg.innerText = "✅ День скинуто!";
+        resetMsg.style.position = "fixed";
+        resetMsg.style.bottom = "90px";
+        resetMsg.style.left = "50%";
+        resetMsg.style.transform = "translateX(-50%)";
+        resetMsg.style.backgroundColor = "#10B981dd";
+        resetMsg.style.padding = "8px 20px";
+        resetMsg.style.borderRadius = "40px";
+        resetMsg.style.color = "white";
+        resetMsg.style.fontWeight = "bold";
+        resetMsg.style.zIndex = "1000";
+        resetMsg.style.fontSize = "14px";
+        document.body.appendChild(resetMsg);
+        setTimeout(() => resetMsg.remove(), 1500);
+      }
+
+      // Очистити всю історію
+      function clearHistory() {
+        if (history.length === 0) return;
+        if (confirm("Видалити всю історію активності?")) {
+          history = [];
+          saveToLocal();
+          renderHistory();
+          // додаємо запис про очищення (щоб не було порожньо безслідно)
+          addHistoryRecord("clear_history", "Історію видалено", value);
+        }
+      }
+
+      // Навігація між екранами
+      function switchTab(tabId) {
+        const screens = document.querySelectorAll(".screen");
+        screens.forEach((screen) => screen.classList.remove("active"));
+        const activeScreen = document.getElementById(`screen-${tabId}`);
+        if (activeScreen) activeScreen.classList.add("active");
+
+        // оновлюємо активний клас кнопок навігації
+        const navLimitBtn = document.getElementById("nav-limit");
+        const navHistoryBtn = document.getElementById("nav-history");
+        if (tabId === "limit") {
+          navLimitBtn.classList.add("active-nav");
+          navHistoryBtn.classList.remove("active-nav");
+        } else {
+          navHistoryBtn.classList.add("active-nav");
+          navLimitBtn.classList.remove("active-nav");
+        }
+        // при переході на історію оновити рендер (зайвим не буде)
+        if (tabId === "history") renderHistory();
+      }
+
+      // ========== ЗАВАНТАЖЕННЯ ДАНИХ ІЗ LOCALSTORAGE ==========
+      function loadInitialData() {
+        // завантажуємо значення
+        let storedValue = localStorage.getItem("limit_app_value");
+        let storedLimit = localStorage.getItem("limit_app_limit");
+        let storedHistory = localStorage.getItem("limit_app_history");
+
+        if (storedLimit !== null && !isNaN(Number(storedLimit))) {
+          limit = Number(storedLimit);
+        } else {
+          limit = 20;
+        }
+
+        if (storedValue !== null && !isNaN(Number(storedValue))) {
+          value = Number(storedValue);
+        } else {
+          // якщо немає value, то стандартно = limit (повний залишок на старті)
+          value = limit;
+        }
+
+        // корекція: якщо value > limit (аномалія) або <0
+        if (value > limit) value = limit;
+        if (value < 0) value = 0;
+
+        if (storedHistory) {
+          try {
+            let parsed = JSON.parse(storedHistory);
+            if (Array.isArray(parsed)) history = parsed;
+            else history = [];
+          } catch (e) {
+            history = [];
+          }
+        } else {
+          // при першому запуску додаємо привітальний запис
+          history = [];
+          addHistoryRecord(
+            "limit_change",
+            `Ліміт встановлено на ${limit}`,
+            value,
+          );
+        }
+        // після завантаження переконатися що немає дублікатів/очистки
+        if (history.length > 200) history = history.slice(0, 200);
+        saveToLocal();
+        updateUI();
+        renderHistory();
+      }
+
+      // ========== ОНОВЛЕННЯ ІНТЕРАКТИВНИХ ЕЛЕМЕНТІВ ТА ПОДІЙ ==========
+      function bindEvents() {
+        document
+          .getElementById("setLimitBtn")
+          .addEventListener("click", setNewLimit);
+        document.getElementById("useOneBtn").addEventListener("click", useOne);
+        document
+          .getElementById("resetDayBtn")
+          .addEventListener("click", resetDay);
+        document
+          .getElementById("clearHistoryBtn")
+          .addEventListener("click", clearHistory);
+
+        // навігаційні кнопки
+        document
+          .getElementById("nav-limit")
+          .addEventListener("click", () => switchTab("limit"));
+        document
+          .getElementById("nav-history")
+          .addEventListener("click", () => switchTab("history"));
+      }
+
+      // Запуск програми
+      function init() {
+        loadInitialData();
+        bindEvents();
+        // додатковий захист якщо значення history не має або зберігається old version
+        if (!history.length && limit) {
+          // якщо історія порожня, але програма вже має ліміт, додаємо базове повідомлення
+          addHistoryRecord("limit_change", `Поточний ліміт ${limit}`, value);
+        }
+        // перевіряємо активний екран за замовчуванням
+        switchTab("limit");
+      }
+
+      init();
+    </script>
   </body>
 </html>
