@@ -1,170 +1,291 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <!--
-    ⚠️ ЗМІНИТИ: назву додатка та опис
-  -->
-  <title>Hybrid App</title>
-  <style>
-    /* ⚠️ ЗМІНИТИ: замінити на свій CSS або підключити CSS файл з бандлу */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f5f5f5;
-      color: #1a1a1a;
-      padding: 16px;
-    }
-    h1 { font-size: 1.5rem; margin-bottom: 8px; }
-    p  { font-size: 0.95rem; color: #555; margin-bottom: 16px; }
-    button {
-      padding: 12px 24px;
-      border: none;
-      border-radius: 8px;
-      background: #6200ee;
-      color: white;
-      font-size: 1rem;
-      cursor: pointer;
-      margin-bottom: 8px;
-      display: block;
-      width: 100%;
-    }
-    button:active { opacity: 0.8; }
-    #log {
-      margin-top: 16px;
-      padding: 12px;
-      background: #fff;
-      border-radius: 8px;
-      border: 1px solid #e0e0e0;
-      font-size: 0.85rem;
-      min-height: 60px;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      background: #e8f5e9;
-      color: #2e7d32;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      margin-bottom: 16px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Device Sensor Tester</title>
+
+    <!-- Ionic Framework (MD Mode) -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" />
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6750A4">
+
+    <style>
+        :root {
+            /* Material Design 3 (Material You) Variables */
+            --ion-font-family: system-ui, -apple-system, Roboto, 'Helvetica Neue', sans-serif;
+            --android-easing: cubic-bezier(0.2, 0, 0, 1);
+            --ion-border-radius: 28px;
+        }
+
+        /* MD3 Card Style */
+        ion-card {
+            border-radius: var(--ion-border-radius);
+            box-shadow: none;
+            border: 1px solid rgba(0,0,0,0.08);
+            margin: 16px;
+            background: #fdfbff; /* Surface container low */
+            transition: transform 0.2s var(--android-easing);
+        }
+
+        ion-card:active {
+            transform: scale(0.98);
+        }
+
+        .sensor-data {
+            font-family: 'Roboto Mono', monospace;
+            font-weight: 700;
+            color: var(--ion-color-primary);
+            font-size: 1.1rem;
+        }
+
+        #camera-preview {
+            width: 100%;
+            height: 240px;
+            background: #1c1b1f;
+            border-radius: 20px;
+            object-fit: cover;
+            margin-bottom: 12px;
+            display: none;
+        }
+
+        /* Safe Areas */
+        ion-content {
+            --padding-top: env(safe-area-inset-top);
+            --padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* Skeleton Screen */
+        .skeleton-card {
+            padding: 16px;
+        }
+
+        /* GPU Accelerated Transitions */
+        .fade-in {
+            animation: fadeIn 0.4s var(--android-easing) forwards;
+            opacity: 0;
+            will-change: opacity, transform;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
-<body>
+<body class="md">
+    <ion-app>
+        <!-- Skeleton Loading State -->
+        <div id="skeleton-state" class="ion-page">
+            <ion-header class="ion-no-border">
+                <ion-toolbar>
+                    <ion-title><ion-skeleton-text animated style="width: 60%"></ion-skeleton-text></ion-title>
+                </ion-toolbar>
+            </ion-header>
+            <ion-content class="ion-padding">
+                <ion-card class="skeleton-card">
+                    <ion-skeleton-text animated style="width: 80%; height: 24px;"></ion-skeleton-text>
+                    <ion-skeleton-text animated style="width: 100%; height: 150px; margin-top: 12px;"></ion-skeleton-text>
+                </ion-card>
+                <ion-card class="skeleton-card">
+                    <ion-skeleton-text animated style="width: 50%; height: 24px;"></ion-skeleton-text>
+                    <ion-skeleton-text animated style="width: 100%; height: 100px; margin-top: 12px;"></ion-skeleton-text>
+                </ion-card>
+            </ion-content>
+        </div>
 
-  <h1>🔗 Hybrid App</h1>
-  <!-- ⚠️ ЗМІНИТИ: версію та інформацію -->
-  <span class="badge" id="status">Перевірка bridge...</span>
-  <p>Це приклад веб-бандлу що завантажується динамічно з GitHub.<br>
-     Замінити цей файл на свій SPA/PWA бандл.</p>
+        <!-- Main App State -->
+        <div id="app-state" class="ion-page" style="display: none;">
+            <ion-header class="ion-no-border">
+                <ion-toolbar color="surface">
+                    <ion-title style="font-weight: 700;">Sensor Tester</ion-title>
+                </ion-toolbar>
+            </ion-header>
 
-  <!-- ─── Кнопки для тестування Bridge ────────────────────────────── -->
-  <button onclick="testNotification()">📣 Показати сповіщення</button>
-  <button onclick="testSyncData()">🔄 Синхронізувати дані (Widget)</button>
-  <button onclick="testLocale()">🌐 Отримати локаль</button>
-  <button onclick="testVersion()">ℹ️ Версія додатка</button>
+            <ion-content color="light" class="fade-in">
+                <!-- Camera Test -->
+                <ion-card>
+                    <ion-card-header>
+                        <ion-card-subtitle>Hardware</ion-card-subtitle>
+                        <ion-card-title>📷 Camera Module</ion-card-title>
+                    </ion-card-header>
+                    <ion-card-content>
+                        <video id="camera-preview" autoplay playsinline></video>
+                        <ion-button expand="block" mode="md" class="ion-activatable ripple-parent" onclick="toggleCamera()">
+                            Start Camera Test
+                            <ion-ripple-effect></ion-ripple-effect>
+                        </ion-button>
+                    </ion-card-content>
+                </ion-card>
 
-  <div id="log">Лог викликів Bridge...</div>
+                <!-- Accelerometer Test -->
+                <ion-card>
+                    <ion-card-header>
+                        <ion-card-subtitle>Motion</ion-card-subtitle>
+                        <ion-card-title>⚖️ Accelerometer</ion-card-title>
+                    </ion-card-header>
+                    <ion-card-content>
+                        <ion-grid>
+                            <ion-row>
+                                <ion-col>
+                                    <div class="ion-text-center">
+                                        <div class="sensor-label">X-Axis</div>
+                                        <div id="accel-x" class="sensor-data">0.00</div>
+                                    </div>
+                                </ion-col>
+                                <ion-col>
+                                    <div class="ion-text-center">
+                                        <div class="sensor-label">Y-Axis</div>
+                                        <div id="accel-y" class="sensor-data">0.00</div>
+                                    </div>
+                                </ion-col>
+                                <ion-col>
+                                    <div class="ion-text-center">
+                                        <div class="sensor-label">Z-Axis</div>
+                                        <div id="accel-z" class="sensor-data">0.00</div>
+                                    </div>
+                                </ion-col>
+                            </ion-row>
+                        </ion-grid>
+                    </ion-card-content>
+                </ion-card>
 
-  <script>
-    /**
-     * ⚠️ ЗМІНИТИ: "Android" — має збігатися з AppConfig.JS_BRIDGE_NAME у Kotlin
-     * Якщо змінюєш ім'я bridge — зміни й тут, і у AppConfig.kt
-     */
-    const BRIDGE_NAME = "Android";
+                <!-- Audio Test -->
+                <ion-card>
+                    <ion-card-header>
+                        <ion-card-subtitle>Sound</ion-card-subtitle>
+                        <ion-card-title>🔊 Stereo Speakers</ion-card-title>
+                    </ion-card-header>
+                    <ion-card-content>
+                        <p class="ion-margin-bottom">Generate a high-frequency sine wave to test audio quality.</p>
+                        <ion-button expand="block" fill="outline" mode="md" onclick="playTestTone()">
+                            Play 440Hz Tone
+                        </ion-button>
+                    </ion-card-content>
+                </ion-card>
 
-    // ─── Перевірка наявності Bridge при завантаженні ──────────────
-    window.addEventListener("DOMContentLoaded", () => {
-      const statusEl = document.getElementById("status");
-      if (typeof window[BRIDGE_NAME] !== "undefined") {
-        statusEl.textContent = "✅ Bridge підключений";
-        statusEl.style.background = "#e8f5e9";
-        statusEl.style.color = "#2e7d32";
-      } else {
-        statusEl.textContent = "⚠️ Bridge недоступний (браузер?)";
-        statusEl.style.background = "#fff3e0";
-        statusEl.style.color = "#e65100";
-      }
-    });
+                <!-- Notification Test -->
+                <ion-card>
+                    <ion-card-header>
+                        <ion-card-subtitle>Native Bridge</ion-card-subtitle>
+                        <ion-card-title>🔔 Notification Test</ion-card-title>
+                    </ion-card-header>
+                    <ion-card-content>
+                        <ion-button expand="block" color="secondary" mode="md" onclick="sendNativeNotification()">
+                            Trigger Alert
+                        </ion-button>
+                    </ion-card-content>
+                </ion-card>
 
-    // ─── Утиліта логування ────────────────────────────────────────
-    function log(msg) {
-      const el = document.getElementById("log");
-      el.textContent = new Date().toLocaleTimeString() + ": " + msg + "\n" + el.textContent;
-    }
+                <!-- Footer Spacer for Bottom Nav -->
+                <div style="height: 80px;"></div>
+            </ion-content>
 
-    /**
-     * Показати нативне сповіщення.
-     * ⚠️ ЗМІНИТИ: заголовок та текст відповідно до UX
-     */
-    function testNotification() {
-      if (typeof window[BRIDGE_NAME] !== "undefined") {
-        window[BRIDGE_NAME].showNotification(
-          "Тестове сповіщення",           // ⚠️ ЗМІНИТИ: заголовок
-          "Привіт з веб-частини! 👋"      // ⚠️ ЗМІНИТИ: текст
-        );
-        log("showNotification() викликано");
-      } else {
-        log("Bridge недоступний");
-      }
-    }
+            <!-- Bottom Navigation Bar -->
+            <ion-footer class="ion-no-border">
+                <ion-tab-bar slot="bottom">
+                    <ion-tab-button tab="sensors" selected>
+                        <ion-icon name="speedometer"></ion-icon>
+                        <ion-label>Sensors</ion-label>
+                    </ion-tab-button>
+                    <ion-tab-button tab="info" onclick="openAbout()">
+                        <ion-icon name="information-circle"></ion-icon>
+                        <ion-label>Info</ion-label>
+                    </ion-tab-button>
+                </ion-tab-bar>
+            </ion-footer>
+        </div>
+    </ion-app>
 
-    /**
-     * Передати дані для оновлення Widget.
-     * ⚠️ ЗМІНИТИ: структуру JSON відповідно до WidgetDataEntity полів
-     */
-    function testSyncData() {
-      if (typeof window[BRIDGE_NAME] !== "undefined") {
-        const payload = JSON.stringify({
-          title:    "Оновлено з WebView",          // ⚠️ ЗМІНИТИ
-          subtitle: new Date().toLocaleString(),   // ⚠️ ЗМІНИТИ
-          value:    "42"                           // ⚠️ ЗМІНИТИ або видалити
+    <script>
+        const BRIDGE_NAME = "Android";
+
+        // --- Loading Simulation ---
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('skeleton-state').style.display = 'none';
+                document.getElementById('app-state').style.display = 'block';
+            }, 1200);
         });
-        window[BRIDGE_NAME].syncData(payload);
-        log("syncData() викликано: " + payload);
-      } else {
-        log("Bridge недоступний");
-      }
-    }
 
-    /**
-     * Отримати поточну локаль пристрою.
-     */
-    function testLocale() {
-      if (typeof window[BRIDGE_NAME] !== "undefined") {
-        const locale = window[BRIDGE_NAME].getDeviceLocale();
-        log("getDeviceLocale() = " + locale);
-      } else {
-        // Fallback для тестування у браузері
-        log("Locale (fallback): " + navigator.language);
-      }
-    }
+        // --- 1. Camera Logic ---
+        let stream = null;
+        async function toggleCamera() {
+            const video = document.getElementById('camera-preview');
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+                video.style.display = 'none';
+            } else {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                    video.srcObject = stream;
+                    video.style.display = 'block';
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
 
-    /**
-     * Отримати версію нативного додатка.
-     */
-    function testVersion() {
-      if (typeof window[BRIDGE_NAME] !== "undefined") {
-        const version = window[BRIDGE_NAME].getAppVersion();
-        log("getAppVersion() = " + version);
-      } else {
-        log("Bridge недоступний");
-      }
-    }
+        // --- 2. Audio Logic ---
+        function playTestTone() {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
 
-    /**
-     * ⚠️ ЗМІНИТИ / РОЗШИРИТИ: додай свою бізнес-логіку SPA тут або підключи
-     * зібраний JS-бандл (React/Vue/Angular):
-     * <script src="./app.bundle.js"><\/script>
-     *
-     * Приклад взаємодії з React компонентом:
-     * document.addEventListener('DOMContentLoaded', () => {
-     *   ReactDOM.render(<App bridge={window.Android} />, document.getElementById('root'));
-     * });
-     */
-  </script>
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 1.5);
+        }
+
+        // --- 3. Accelerometer Logic ---
+        if (window.DeviceMotionEvent) {
+            window.addEventListener('devicemotion', (event) => {
+                const acc = event.accelerationIncludingGravity;
+                if (acc) {
+                    document.getElementById('accel-x').innerText = acc.x.toFixed(2);
+                    document.getElementById('accel-y').innerText = acc.y.toFixed(2);
+                    document.getElementById('accel-z').innerText = acc.z.toFixed(2);
+                }
+            }, true);
+        }
+
+        // --- 4. Native Bridge Logic ---
+        function sendNativeNotification() {
+            if (window[BRIDGE_NAME]) {
+                window[BRIDGE_NAME].showNotification(
+                    "Sensor Tester",
+                    "Device hardware test completed successfully! ✅"
+                );
+            } else {
+                alert("Native Bridge not active.");
+            }
+        }
+
+        function openAbout() {
+            if (window[BRIDGE_NAME]) {
+                window[BRIDGE_NAME].showNotification("About App", "PWA Device Tester v1.0.0 Built with Ionic & MD3");
+            }
+        }
+
+        // --- Service Worker ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => {
+                    console.log('SW Registered');
+                }).catch(err => console.log('SW Registration Failed', err));
+            });
+        }
+    </script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
 </body>
 </html>

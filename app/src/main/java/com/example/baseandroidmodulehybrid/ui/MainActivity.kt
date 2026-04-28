@@ -31,15 +31,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-
-/**
- * MainActivity — єдина Activity в додатку (Single Activity Architecture).
- *
- * ⚠️ ЗМІНИТИ:
- *  - Тему додатка у res/values/themes.xml
- *  - Логіку onNewIntent якщо обробляєш Deep Links
- *  - Додай навігацію якщо потрібні нативні екрани (NavHost)
- */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -48,53 +39,31 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var nativeBridge: NativeBridge
 
-    // ─── Запит дозволу на сповіщення (Android 13+) ────────────────────
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        // ⚠️ ЗМІНИТИ: логіку якщо дозвіл відхилено (показ поояснення)
-        if (!granted) {
-            // TODO: показати rationale dialog або інформаційний banner
-        }
-    }
+    ) { granted -> }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ─── Увімкнути WebView DevTools тільки в Debug builds ─────────
-        // ⚠️ ВАЖЛИВО: НІКОЛИ не залишати true в release!
         if (0 != (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE)) {
             WebView.setWebContentsDebuggingEnabled(true)
         }
 
-        // ─── Запит дозволу на сповіщення ──────────────────────────────
         requestNotificationPermissionIfNeeded()
 
-        // ─── Запуск перевірки оновлень при старті ─────────────────────
-        // ⚠️ ЗМІНИТИ: замінити на WorkManager якщо потрібні фонові оновлення
         lifecycleScope.launch {
             updaterViewModel.checkAndUpdate()
         }
 
         setContent {
-            // ⚠️ ЗМІНИТИ: назву теми на свою (res/values/themes.xml)
-            // BaseAndroidModuleHybridTheme { ... }
-
             val updateState by updaterViewModel.updateState.collectAsState()
+            val installedBundlePath by updaterViewModel.installedBundlePath.collectAsState()
             val snackbarHostState = remember { SnackbarHostState() }
 
-            // ─── Показ повідомлень про стан оновлення ─────────────────
             LaunchedEffect(updateState) {
-                when (updateState) {
-                    is UpdateState.Error -> {
-                        snackbarHostState.showSnackbar(
-                            (updateState as UpdateState.Error).message
-                        )
-                    }
-                    is UpdateState.UpToDate -> {
-                        // Нічого не показуємо — вже актуальна версія
-                    }
-                    else -> Unit
+                if (updateState is UpdateState.Error) {
+                    snackbarHostState.showSnackbar((updateState as UpdateState.Error).message)
                 }
             }
 
@@ -106,13 +75,12 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
-                    // ─── Головний WebView контейнер ────────────────────
                     HybridWebView(
                         modifier = Modifier.fillMaxSize(),
-                        bridge = nativeBridge
+                        bridge = nativeBridge,
+                        localBundlePath = installedBundlePath
                     )
 
-                    // ─── Індикатор завантаження під час оновлення ─────
                     if (updateState is UpdateState.Downloading) {
                         LinearProgressIndicator(
                             modifier = Modifier.align(Alignment.TopCenter)
@@ -127,15 +95,5 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
-    }
-
-    /**
-     * ⚠️ ЗМІНИТИ: якщо додаток отримує Deep Links або Notification intents —
-     * обробляй їх тут і передавай у WebView через Bridge.
-     */
-    override fun onNewIntent(intent: android.content.Intent) {
-        super.onNewIntent(intent)
-        // TODO: обробка intent extras, наприклад:
-        // intent.getStringExtra("notification_payload")?.let { bridge.forwardToWeb(it) }
     }
 }

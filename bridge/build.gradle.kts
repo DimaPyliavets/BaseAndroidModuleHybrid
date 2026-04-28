@@ -25,6 +25,7 @@ android {
 dependencies {
     implementation(project(":core"))
     implementation(project(":notifications"))
+    implementation(project(":widget"))
 
     implementation(libs.core.ktx)
     implementation(libs.coroutines.android)

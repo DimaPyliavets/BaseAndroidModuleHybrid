@@ -17,22 +17,15 @@ import com.example.baseandroidmodulehybrid.core.model.AppConfig
  * HybridWebView — Composable обгортка над Android WebView.
  *
  * Використовує WebViewAssetLoader для безпечного завантаження локальних файлів.
- *
- * ⚠️ ЗМІНИТИ:
- *  - Додай обробку onPageFinished якщо треба виконати JS після завантаження
- *  - Додай WebChromeClient якщо потрібні alert/confirm/geolocation/file picker
- *  - Передай localBundlePath через ViewModel State, а не хардкодь
  */
 @Composable
 fun HybridWebView(
     modifier: Modifier = Modifier,
     bridge: NativeBridge,
-    // ⚠️ ЗМІНИТИ: передавай шлях з UpdaterViewModel State
     localBundlePath: String? = null
 ) {
     val context = LocalContext.current
 
-    // ─── Пам'ятаємо конфіг щоб не пересоздавати при рекомпозиції ─────
     val webViewConfig = remember { WebViewConfig(context) }
     val assetLoader   = remember { webViewConfig.createAssetLoader() }
     val startUrl      = remember(localBundlePath) {
@@ -43,23 +36,16 @@ fun HybridWebView(
         modifier = modifier,
         factory = { ctx ->
             WebView(ctx).apply {
-                // ─── Налаштування ─────────────────────────────────────
                 webViewConfig.configureSettings(settings)
 
-                // ─── Підключення Bridge (JavascriptInterface) ─────────
                 addJavascriptInterface(bridge, AppConfig.JS_BRIDGE_NAME)
-                // ⚠️ ВАЖЛИВО: JS_BRIDGE_NAME = "Android"
-                //   У JS: window.Android.showNotification("title", "msg")
 
-                // ─── WebViewClient з AssetLoader ──────────────────────
                 webViewClient = HybridWebViewClient(assetLoader)
 
-                // ─── Завантаження початкового URL ─────────────────────
                 loadUrl(startUrl)
             }
         },
         update = { webView ->
-            // ⚠️ При зміні startUrl (після оновлення бандлу) — перезавантажити
             if (webView.url != startUrl) {
                 webView.loadUrl(startUrl)
             }
@@ -67,12 +53,6 @@ fun HybridWebView(
     )
 }
 
-/**
- * HybridWebViewClient — перехоплює запити та обслуговує їх через AssetLoader.
- *
- * ⚠️ ВАЖЛИВО: shouldInterceptRequest є єдиним місцем де дозволено завантаження.
- * Будь-які зовнішні URL будуть заблоковані (повернено null → помилка завантаження).
- */
 private class HybridWebViewClient(
     private val assetLoader: WebViewAssetLoader
 ) : WebViewClient() {
@@ -81,8 +61,6 @@ private class HybridWebViewClient(
         view: WebView,
         request: WebResourceRequest
     ): WebResourceResponse? {
-        // AssetLoader обробляє лише запити до TRUSTED_ORIGIN
-        // Всі інші запити → null (зовнішній доступ заблоковано)
         return assetLoader.shouldInterceptRequest(request.url)
     }
 
@@ -93,27 +71,18 @@ private class HybridWebViewClient(
         failingUrl: String
     ) {
         super.onReceivedError(view, errorCode, description, failingUrl)
-        // ⚠️ ЗМІНИТИ: додай логування помилок (Timber / Firebase Crashlytics)
-        // Наприклад: Timber.e("WebView error $errorCode: $description at $failingUrl")
+        // Якщо сталася критична помилка завантаження (наприклад, файл не знайдено),
+        // завантажуємо локальну сторінку помилки.
+        if (errorCode == ERROR_FILE_NOT_FOUND || errorCode == ERROR_UNKNOWN) {
+             view.loadUrl("${WebViewConfig.TRUSTED_ORIGIN}${WebViewConfig.ASSETS_PATH}error.html")
+        }
     }
 
-    /**
-     * ⚠️ ВАЖЛИВО: Блокуємо навігацію до зовнішніх URL.
-     * Якщо веб-частина намагається перейти на зовнішній сайт — ігноруємо.
-     */
     override fun shouldOverrideUrlLoading(
         view: WebView,
         request: WebResourceRequest
     ): Boolean {
         val url = request.url.toString()
-        // Дозволяємо лише наш trusted origin
         return !url.startsWith(WebViewConfig.TRUSTED_ORIGIN)
-        // ⚠️ ЗМІНИТИ: якщо треба відкривати зовнішні URL у браузері:
-        // return if (url.startsWith("https://allowed-domain.com")) {
-        //     startActivity(Intent(Intent.ACTION_VIEW, request.url))
-        //     true
-        // } else {
-        //     !url.startsWith(WebViewConfig.TRUSTED_ORIGIN)
-        // }
     }
 }

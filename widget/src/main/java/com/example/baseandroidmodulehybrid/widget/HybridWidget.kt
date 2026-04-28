@@ -2,6 +2,8 @@ package com.example.baseandroidmodulehybrid.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -14,42 +16,50 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
 import androidx.glance.text.Text
 import androidx.glance.appwidget.updateAll
+import com.example.baseandroidmodulehybrid.core.model.WidgetDataDao
+import com.example.baseandroidmodulehybrid.core.model.WidgetDataEntity
+import dagger.hilt.EntryPoint
+import dagger.hilt.EntryPoints
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 
 /**
  * HybridWidget — Android Glance AppWidget.
- *
- * Відображає дані з Room БД.
  */
 class HybridWidget : GlanceAppWidget() {
 
+    @EntryPoint
+    @InstallIn(SingletonComponent::class)
+    interface WidgetEntryPoint {
+        fun widgetDao(): WidgetDataDao
+    }
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val title = "Завантаження..."
-        val subtitle = ""
+        val entryPoint = EntryPoints.get(context.applicationContext, WidgetEntryPoint::class.java)
+        val dao = entryPoint.widgetDao()
 
         provideContent {
-            WidgetContent(title, subtitle)
+            val data by dao.observe().collectAsState(initial = null)
+            WidgetContent(data)
         }
     }
 
     @Composable
-    private fun WidgetContent(title: String, subtitle: String) {
+    private fun WidgetContent(data: WidgetDataEntity?) {
+        val title = data?.title ?: "Немає даних"
+        val subtitle = data?.subtitle ?: "Синхронізуйте з додатку"
+
         Column(
             modifier = GlanceModifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.Horizontal.Start,
             verticalAlignment = Alignment.Vertical.Top
         ) {
             Text(text = title)
-
-            if (subtitle.isNotBlank()) {
-                Text(text = subtitle)
-            }
+            Text(text = subtitle)
         }
     }
 
     companion object {
-        /**
-         * Викликати для оновлення всіх екземплярів віджета.
-         */
         suspend fun updateAll(context: Context) {
             HybridWidget().updateAll(context)
         }

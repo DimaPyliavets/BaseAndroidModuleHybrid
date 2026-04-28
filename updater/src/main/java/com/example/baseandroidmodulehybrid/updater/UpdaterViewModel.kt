@@ -11,25 +11,20 @@ import javax.inject.Inject
 
 /**
  * UpdateState — стани процесу оновлення.
- * ⚠️ ЗМІНИТИ: додай стани якщо потрібні більш деталізовані кроки
  */
 sealed class UpdateState {
-    object Idle        : UpdateState()        // Початковий стан
-    object Checking    : UpdateState()        // Перевірка version.json
-    object UpToDate    : UpdateState()        // Оновлень немає
-    object Downloading : UpdateState()        // Завантаження бандлу
-    object Extracting  : UpdateState()        // Розпакування
-    object Applying    : UpdateState()        // Застосування (перезавантаження WebView)
-    object Success     : UpdateState()        // Успішно
-    data class Error(val message: String) : UpdateState() // Помилка
+    object Idle        : UpdateState()
+    object Checking    : UpdateState()
+    object UpToDate    : UpdateState()
+    object Downloading : UpdateState()
+    object Extracting  : UpdateState()
+    object Applying    : UpdateState()
+    object Success     : UpdateState()
+    data class Error(val message: String) : UpdateState()
 }
 
 /**
  * UpdaterViewModel — управляє станом оновлення для UI.
- *
- * ⚠️ ЗМІНИТИ:
- *  - Додай логіку примусового оновлення (force update) якщо потрібно
- *  - Підключи WorkManager для планових фонових перевірок
  */
 @HiltViewModel
 class UpdaterViewModel @Inject constructor(
@@ -39,20 +34,18 @@ class UpdaterViewModel @Inject constructor(
     private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
     val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
 
+    private val _installedBundlePath = MutableStateFlow<String?>(repository.getLocalBundlePath())
+    val installedBundlePath: StateFlow<String?> = _installedBundlePath.asStateFlow()
+
     /**
      * Запускає повний цикл перевірки та застосування оновлення.
-     * Викликається з MainActivity.onCreate().
-     *
-     * ⚠️ ЗМІНИТИ: додай параметр force: Boolean = false для примусового оновлення
      */
     fun checkAndUpdate() {
         viewModelScope.launch {
             _updateState.value = UpdateState.Checking
 
-            // ─── Крок 1: Завантажити version.json ──────────────────────
             val versionResult = repository.fetchVersionInfo()
             if (versionResult.isFailure) {
-                // ⚠️ Тут можна вирішити: fallback на локальний бандл або показ помилки
                 _updateState.value = UpdateState.Error(
                     "Не вдалося перевірити оновлення: ${versionResult.exceptionOrNull()?.message}"
                 )
@@ -61,13 +54,11 @@ class UpdaterViewModel @Inject constructor(
 
             val versionInfo = versionResult.getOrThrow()
 
-            // ─── Крок 2: Порівняти версії ──────────────────────────────
             if (!repository.isUpdateRequired(versionInfo.version)) {
                 _updateState.value = UpdateState.UpToDate
                 return@launch
             }
 
-            // ─── Крок 3: Завантажити бандл ─────────────────────────────
             _updateState.value = UpdateState.Downloading
             val downloadResult = repository.downloadBundle(versionInfo)
             if (downloadResult.isFailure) {
@@ -77,7 +68,6 @@ class UpdaterViewModel @Inject constructor(
                 return@launch
             }
 
-            // ─── Крок 4: Верифікація + розпакування ────────────────────
             _updateState.value = UpdateState.Extracting
             val extractResult = repository.verifyAndExtract(
                 zipFile      = downloadResult.getOrThrow(),
@@ -90,12 +80,11 @@ class UpdaterViewModel @Inject constructor(
                 return@launch
             }
 
-            // ─── Крок 5: Зберегти нову версію ──────────────────────────
             repository.saveCurrentVersion(versionInfo.version)
-
+            
+            // Оновлюємо шлях до бандлу після успішного розпакування
+            _installedBundlePath.value = repository.getLocalBundlePath()
             _updateState.value = UpdateState.Success
-            // ⚠️ ЗМІНИТИ: після Success — тригернути перезавантаження WebView
-            // Можна через SharedFlow або EventBus (залежить від архітектури)
         }
     }
 }

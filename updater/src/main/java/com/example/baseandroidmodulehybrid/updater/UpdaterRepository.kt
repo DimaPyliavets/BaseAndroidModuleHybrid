@@ -2,6 +2,7 @@ package com.example.baseandroidmodulehybrid.updater
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import com.example.baseandroidmodulehybrid.core.model.AppConfig
 import com.example.baseandroidmodulehybrid.core.model.VersionInfo
 import com.example.baseandroidmodulehybrid.core.util.HashUtils
@@ -16,20 +17,19 @@ import java.util.zip.ZipInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * UpdaterRepository — логіка перевірки та застосування оновлень.
- */
 @Singleton
 class UpdaterRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val httpClient: OkHttpClient
 ) {
+    private val TAG = "UpdaterRepository"
     private val prefs: SharedPreferences by lazy {
         context.getSharedPreferences(AppConfig.PREFS_NAME, Context.MODE_PRIVATE)
     }
 
     suspend fun fetchVersionInfo(): Result<VersionInfo> = withContext(Dispatchers.IO) {
         runCatching {
+            Log.d(TAG, "Fetching version info from: ${AppConfig.GITHUB_VERSION_URL}")
             val request = Request.Builder()
                 .url(AppConfig.GITHUB_VERSION_URL)
                 .cacheControl(okhttp3.CacheControl.FORCE_NETWORK)
@@ -37,27 +37,40 @@ class UpdaterRepository @Inject constructor(
 
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    error("HTTP ${response.code}: не вдалося завантажити version.json")
+                    val errorMsg = "HTTP ${response.code}: Failed to download version.json"
+                    Log.e(TAG, errorMsg)
+                    error(errorMsg)
                 }
                 val body = response.body?.string()
-                    ?: error("Порожня відповідь від сервера")
+                Log.d(TAG, "Received JSON: $body")
+                if (body.isNullOrBlank()) {
+                    error("Empty response from server")
+                }
                 parseVersionInfo(body)
             }
+        }.onFailure {
+            Log.e(TAG, "Failed to fetch version info", it)
         }
     }
 
     private fun parseVersionInfo(json: String): VersionInfo {
-        val obj = JSONObject(json)
-        return VersionInfo(
-            version        = obj.getString("version"),
-            bundleFileName = obj.getString("bundleFileName"),
-            sha256         = obj.getString("sha256"),
-            releaseNotes   = obj.optString("releaseNotes", "")
-        )
+        return try {
+            val obj = JSONObject(json)
+            VersionInfo(
+                version        = obj.getString("version"),
+                bundleFileName = obj.getString("bundleFileName"),
+                sha256         = obj.getString("sha256"),
+                releaseNotes   = obj.optString("releaseNotes", "")
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "JSON parsing error", e)
+            throw e
+        }
     }
 
     fun isUpdateRequired(remoteVersion: String): Boolean {
         val localVersion = prefs.getString(AppConfig.PREFS_KEY_VERSION, null)
+        Log.d(TAG, "Version check: Local=$localVersion, Remote=$remoteVersion")
         return localVersion != remoteVersion
     }
 
@@ -67,13 +80,15 @@ class UpdaterRepository @Inject constructor(
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
             val url = "${AppConfig.GITHUB_BUNDLE_BASE_URL}${versionInfo.version}/${versionInfo.bundleFileName}"
+            Log.d(TAG, "Downloading bundle from: $url")
+            
             val request = Request.Builder().url(url).build()
             val tempFile = File(context.cacheDir, "bundle_download.zip")
 
             httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) error("HTTP ${response.code}: помилка завантаження")
+                if (!response.isSuccessful) error("HTTP ${response.code}: Download failed")
 
-                val body = response.body ?: error("Порожнє тіло відповіді")
+                val body = response.body ?: error("Empty response body")
                 val contentLength = body.contentLength()
                 var bytesRead = 0L
 
@@ -92,6 +107,8 @@ class UpdaterRepository @Inject constructor(
                 }
             }
             tempFile
+        }.onFailure {
+            Log.e(TAG, "Bundle download failed", it)
         }
     }
 
@@ -100,9 +117,10 @@ class UpdaterRepository @Inject constructor(
         expectedHash: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
+            Log.d(TAG, "Verifying and extracting bundle...")
             if (!HashUtils.verifyFile(zipFile, expectedHash)) {
                 zipFile.delete()
-                error("SHA-256 перевірка не пройдена")
+                error("SHA-256 verification failed")
             }
 
             val bundleDir = File(context.filesDir, AppConfig.BUNDLE_DIR_NAME)
@@ -114,7 +132,7 @@ class UpdaterRepository @Inject constructor(
                 while (entry != null) {
                     val outFile = File(bundleDir, entry.name)
                     if (!outFile.canonicalPath.startsWith(bundleDir.canonicalPath)) {
-                        error("Zip Slip виявлено: ${entry.name}")
+                        error("Zip Slip detected: ${entry.name}")
                     }
 
                     if (entry.isDirectory) {
@@ -130,7 +148,10 @@ class UpdaterRepository @Inject constructor(
                 }
             }
             zipFile.delete()
+            Log.d(TAG, "Bundle extracted successfully")
             Unit
+        }.onFailure {
+            Log.e(TAG, "Verification or extraction failed", it)
         }
     }
 
