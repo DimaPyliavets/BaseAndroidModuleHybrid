@@ -1,10 +1,12 @@
 package com.example.baseandroidmodulehybrid.webview
 
+import android.util.Log
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -13,11 +15,6 @@ import androidx.webkit.WebViewAssetLoader
 import com.example.baseandroidmodulehybrid.bridge.NativeBridge
 import com.example.baseandroidmodulehybrid.core.model.AppConfig
 
-/**
- * HybridWebView — Composable обгортка над Android WebView.
- *
- * Використовує WebViewAssetLoader для безпечного завантаження локальних файлів.
- */
 @Composable
 fun HybridWebView(
     modifier: Modifier = Modifier,
@@ -25,28 +22,35 @@ fun HybridWebView(
     localBundlePath: String? = null
 ) {
     val context = LocalContext.current
-
     val webViewConfig = remember { WebViewConfig(context) }
     val assetLoader   = remember { webViewConfig.createAssetLoader() }
     val startUrl      = remember(localBundlePath) {
         webViewConfig.resolveStartUrl(localBundlePath)
     }
 
+    Log.d("HybridWebView", "Loading URL: $startUrl (Bundle: $localBundlePath)")
+
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
             WebView(ctx).apply {
                 webViewConfig.configureSettings(settings)
-
                 addJavascriptInterface(bridge, AppConfig.JS_BRIDGE_NAME)
-
                 webViewClient = HybridWebViewClient(assetLoader)
-
+                
+                // Якщо завантажуємо локальний бандл, очищуємо кеш
+                if (localBundlePath != null) {
+                    clearCache(true)
+                }
+                
                 loadUrl(startUrl)
             }
         },
         update = { webView ->
+            // Якщо URL змінився (наприклад, після оновлення), завантажуємо новий
             if (webView.url != startUrl) {
+                Log.d("HybridWebView", "Updating WebView URL to: $startUrl")
+                webView.clearCache(true)
                 webView.loadUrl(startUrl)
             }
         }
@@ -71,8 +75,7 @@ private class HybridWebViewClient(
         failingUrl: String
     ) {
         super.onReceivedError(view, errorCode, description, failingUrl)
-        // Якщо сталася критична помилка завантаження (наприклад, файл не знайдено),
-        // завантажуємо локальну сторінку помилки.
+        Log.e("HybridWebView", "Error $errorCode: $description at $failingUrl")
         if (errorCode == ERROR_FILE_NOT_FOUND || errorCode == ERROR_UNKNOWN) {
              view.loadUrl("${WebViewConfig.TRUSTED_ORIGIN}${WebViewConfig.ASSETS_PATH}error.html")
         }

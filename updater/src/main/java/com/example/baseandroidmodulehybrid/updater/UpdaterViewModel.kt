@@ -16,8 +16,8 @@ sealed class UpdateState {
     object Idle        : UpdateState()
     object Checking    : UpdateState()
     object UpToDate    : UpdateState()
-    object Downloading : UpdateState()
-    object Extracting  : UpdateState()
+    data class Downloading(val progress: Int) : UpdateState()
+    data class Extracting(val progress: Int)  : UpdateState()
     object Applying    : UpdateState()
     object Success     : UpdateState()
     data class Error(val message: String) : UpdateState()
@@ -36,6 +36,9 @@ class UpdaterViewModel @Inject constructor(
 
     private val _installedBundlePath = MutableStateFlow<String?>(repository.getLocalBundlePath())
     val installedBundlePath: StateFlow<String?> = _installedBundlePath.asStateFlow()
+
+    private val _currentVersion = MutableStateFlow<String?>(repository.getCurrentVersion())
+    val currentVersion: StateFlow<String?> = _currentVersion.asStateFlow()
 
     /**
      * Запускає повний цикл перевірки та застосування оновлення.
@@ -59,8 +62,11 @@ class UpdaterViewModel @Inject constructor(
                 return@launch
             }
 
-            _updateState.value = UpdateState.Downloading
-            val downloadResult = repository.downloadBundle(versionInfo)
+            _updateState.value = UpdateState.Downloading(0)
+            val downloadResult = repository.downloadBundle(versionInfo) { progress ->
+                _updateState.value = UpdateState.Downloading(progress)
+            }
+            
             if (downloadResult.isFailure) {
                 _updateState.value = UpdateState.Error(
                     "Помилка завантаження: ${downloadResult.exceptionOrNull()?.message}"
@@ -68,11 +74,15 @@ class UpdaterViewModel @Inject constructor(
                 return@launch
             }
 
-            _updateState.value = UpdateState.Extracting
+            _updateState.value = UpdateState.Extracting(0)
             val extractResult = repository.verifyAndExtract(
                 zipFile      = downloadResult.getOrThrow(),
-                expectedHash = versionInfo.sha256
+                expectedHash = versionInfo.sha256,
+                onProgress = { progress ->
+                    _updateState.value = UpdateState.Extracting(progress)
+                }
             )
+
             if (extractResult.isFailure) {
                 _updateState.value = UpdateState.Error(
                     "Помилка перевірки/розпакування: ${extractResult.exceptionOrNull()?.message}"
@@ -82,7 +92,8 @@ class UpdaterViewModel @Inject constructor(
 
             repository.saveCurrentVersion(versionInfo.version)
             
-            // Оновлюємо шлях до бандлу після успішного розпакування
+            // Оновлюємо версію та шлях, що змусить UI (MainActivity) перемалюватися
+            _currentVersion.value = versionInfo.version
             _installedBundlePath.value = repository.getLocalBundlePath()
             _updateState.value = UpdateState.Success
         }

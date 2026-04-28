@@ -9,19 +9,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.example.baseandroidmodulehybrid.bridge.NativeBridge
 import com.example.baseandroidmodulehybrid.updater.UpdaterViewModel
@@ -59,11 +54,16 @@ class MainActivity : ComponentActivity() {
         setContent {
             val updateState by updaterViewModel.updateState.collectAsState()
             val installedBundlePath by updaterViewModel.installedBundlePath.collectAsState()
+            // Додаємо відстеження версії для примусового оновлення
+            val currentVersion by updaterViewModel.currentVersion.collectAsState()
             val snackbarHostState = remember { SnackbarHostState() }
 
             LaunchedEffect(updateState) {
                 if (updateState is UpdateState.Error) {
                     snackbarHostState.showSnackbar((updateState as UpdateState.Error).message)
+                }
+                if (updateState is UpdateState.Success) {
+                    snackbarHostState.showSnackbar("Оновлення встановлено!")
                 }
             }
 
@@ -75,19 +75,73 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
-                    HybridWebView(
-                        modifier = Modifier.fillMaxSize(),
-                        bridge = nativeBridge,
-                        localBundlePath = installedBundlePath
-                    )
-
-                    if (updateState is UpdateState.Downloading) {
-                        LinearProgressIndicator(
-                            modifier = Modifier.align(Alignment.TopCenter)
+                    // Використовуємо комбінацію шляху та версії як ключ.
+                    // Якщо версія зміниться, WebView буде перестворено з новими файлами.
+                    key(installedBundlePath, currentVersion) {
+                        HybridWebView(
+                            modifier = Modifier.fillMaxSize(),
+                            bridge = nativeBridge,
+                            localBundlePath = installedBundlePath
                         )
+                    }
+
+                    UpdateOverlay(updateState)
+                }
+            }
+        }
+    }
+
+    @Composable
+    fun UpdateOverlay(state: UpdateState) {
+        when (state) {
+            is UpdateState.Downloading, is UpdateState.Extracting, UpdateState.Applying -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            val title = when (state) {
+                                is UpdateState.Downloading -> "Завантаження оновлення"
+                                is UpdateState.Extracting -> "Встановлення..."
+                                else -> "Оновлення системи"
+                            }
+                            
+                            val progressValue = when (state) {
+                                is UpdateState.Downloading -> state.progress / 100f
+                                is UpdateState.Extracting -> state.progress / 100f
+                                else -> null
+                            }
+
+                            Text(text = title, style = MaterialTheme.typography.titleLarge)
+                            Spacer(modifier = Modifier.height(24.dp))
+                            
+                            if (progressValue != null) {
+                                LinearProgressIndicator(
+                                    progress = { progressValue },
+                                    modifier = Modifier.width(200.dp).height(8.dp)
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "${(progressValue * 100).toInt()}%",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            } else {
+                                CircularProgressIndicator()
+                            }
+                        }
                     }
                 }
             }
+            else -> {}
         }
     }
 

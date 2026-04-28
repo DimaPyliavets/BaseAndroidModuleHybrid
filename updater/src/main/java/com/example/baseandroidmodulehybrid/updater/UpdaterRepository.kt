@@ -39,99 +39,66 @@ class UpdaterRepository @Inject constructor(
 
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
-                    val errorMsg = "HTTP ${response.code}: Failed to download version.json"
-                    Log.e(TAG, errorMsg)
-                    throw IOException(errorMsg)
+                    throw IOException("HTTP ${response.code}: Failed to download version.json")
                 }
                 val body = response.body?.string()
                 Log.d(TAG, "Received JSON: $body")
-                if (body.isNullOrBlank()) {
-                    throw IOException("Empty response from server")
-                }
+                if (body.isNullOrBlank()) throw IOException("Empty response")
                 parseVersionInfo(body)
             }
-        }.onFailure {
-            Log.e(TAG, "Failed to fetch version info", it)
-        }
+        }.onFailure { Log.e(TAG, "Failed to fetch version info", it) }
     }
 
     private fun parseVersionInfo(json: String): VersionInfo {
-        return try {
-            val obj = JSONObject(json)
-            VersionInfo(
-                version        = obj.getString("version"),
-                bundleFileName = obj.getString("bundleFileName"),
-                sha256         = obj.getString("sha256"),
-                releaseNotes   = obj.optString("releaseNotes", "")
-            )
-        } catch (e: Exception) {
-            Log.e(TAG, "JSON parsing error", e)
-            throw e
-        }
+        val obj = JSONObject(json)
+        return VersionInfo(
+            version        = obj.getString("version"),
+            bundleFileName = obj.getString("bundleFileName"),
+            sha256         = obj.getString("sha256"),
+            releaseNotes   = obj.optString("releaseNotes", "")
+        )
     }
 
     fun isUpdateRequired(remoteVersion: String): Boolean {
-        val localVersion = prefs.getString(AppConfig.PREFS_KEY_VERSION, null)
+        val localVersion = getCurrentVersion()
         Log.d(TAG, "Version check: Local=$localVersion, Remote=$remoteVersion")
         return localVersion != remoteVersion
     }
+
+    fun getCurrentVersion(): String? = prefs.getString(AppConfig.PREFS_KEY_VERSION, null)
 
     suspend fun downloadBundle(
         versionInfo: VersionInfo,
         onProgress: (Int) -> Unit = {}
     ): Result<File> = withContext(Dispatchers.IO) {
         runCatching {
-            val version = versionInfo.version
-            val tagsToTry = listOf(
-                if (version.startsWith("v")) version else "v$version",
-                if (version.startsWith("v")) version.substring(1) else version
-            ).distinct()
-
-            var lastException: Exception? = null
+            val url = "${AppConfig.GITHUB_BUNDLE_BASE_URL}${versionInfo.bundleFileName}"
+            Log.d(TAG, "Downloading bundle from: $url")
+            
+            val request = Request.Builder().url(url).build()
             val tempFile = File(context.cacheDir, "bundle_download.zip")
 
-            for (tag in tagsToTry) {
-                val url = "${AppConfig.GITHUB_BUNDLE_BASE_URL}$tag/${versionInfo.bundleFileName}"
-                Log.d(TAG, "Trying download from: $url")
-                val request = Request.Builder().url(url).build()
-                
-                try {
-                    val response = httpClient.newCall(request).execute()
-                    if (response.isSuccessful) {
-                        saveResponseToFile(response, tempFile, onProgress)
-                        return@runCatching tempFile
-                    } else {
-                        val code = response.code
-                        response.close()
-                        lastException = IOException("HTTP $code: Download failed for $url")
-                    }
-                } catch (e: Exception) {
-                    lastException = e
-                }
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+                saveResponseToFile(response, tempFile, onProgress)
             }
-            throw lastException ?: IOException("Failed to download bundle")
-        }.onFailure {
-            Log.e(TAG, "Bundle download failed", it)
-        }
+            tempFile
+        }.onFailure { Log.e(TAG, "Bundle download failed", it) }
     }
 
     private fun saveResponseToFile(response: Response, file: File, onProgress: (Int) -> Unit) {
-        response.use { resp ->
-            val body = resp.body ?: throw IOException("Empty response body")
-            val contentLength = body.contentLength()
-            var bytesRead = 0L
+        val body = response.body ?: throw IOException("Empty body")
+        val contentLength = body.contentLength()
+        var bytesRead = 0L
 
-            file.outputStream().buffered().use { out ->
-                body.byteStream().buffered().use { input ->
-                    val buffer = ByteArray(8192)
-                    var read: Int
-                    while (input.read(buffer).also { read = it } != -1) {
-                        out.write(buffer, 0, read)
-                        bytesRead += read
-                        if (contentLength > 0) {
-                            onProgress((bytesRead * 100 / contentLength).toInt())
-                        }
-                    }
+        file.outputStream().buffered().use { out ->
+            body.byteStream().buffered().use { input ->
+                val buffer = ByteArray(8192)
+                var read: Int
+                while (input.read(buffer).also { read = it } != -1) {
+                    out.write(buffer, 0, read)
+                    bytesRead += read
+                    if (contentLength > 0) onProgress((bytesRead * 100 / contentLength).toInt())
                 }
             }
         }
@@ -139,33 +106,29 @@ class UpdaterRepository @Inject constructor(
 
     suspend fun verifyAndExtract(
         zipFile: File,
-        expectedHash: String
+        expectedHash: String,
+        onProgress: (Int) -> Unit = {}
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             Log.d(TAG, "Verifying and extracting bundle...")
             
-            // Пропускаємо перевірку, якщо хеш у JSON — це всі нулі (для легкого старту)
             if (expectedHash != "0000000000000000000000000000000000000000000000000000000000000000") {
                 if (!HashUtils.verifyFile(zipFile, expectedHash)) {
-                    zipFile.delete()
                     throw IOException("SHA-256 verification failed")
                 }
-            } else {
-                Log.w(TAG, "Skipping hash verification because it's set to all zeros")
             }
 
             val bundleDir = File(context.filesDir, AppConfig.BUNDLE_DIR_NAME)
-            if (bundleDir.exists()) bundleDir.deleteRecursively()
+            bundleDir.deleteRecursively()
             bundleDir.mkdirs()
+
+            val totalEntries = countZipEntries(zipFile)
+            var extracted = 0
 
             ZipInputStream(zipFile.inputStream().buffered()).use { zis ->
                 var entry = zis.nextEntry
                 while (entry != null) {
                     val outFile = File(bundleDir, entry.name)
-                    if (!outFile.canonicalPath.startsWith(bundleDir.canonicalPath)) {
-                        throw IOException("Zip Slip detected: ${entry.name}")
-                    }
-
                     if (entry.isDirectory) {
                         outFile.mkdirs()
                     } else {
@@ -174,16 +137,88 @@ class UpdaterRepository @Inject constructor(
                             zis.copyTo(out)
                         }
                     }
+                    extracted++
+                    if (totalEntries > 0) onProgress((extracted * 100 / totalEntries))
                     zis.closeEntry()
                     entry = zis.nextEntry
                 }
             }
             zipFile.delete()
-            Log.d(TAG, "Bundle extracted successfully")
+            
+            // Логуємо структуру для відладки
+            Log.d(TAG, "Files extracted to: ${bundleDir.absolutePath}")
+            bundleDir.walkTopDown().forEach { Log.v(TAG, "File: ${it.relativeTo(bundleDir).path}") }
+
+            val entryPoint = findEntryPoint(bundleDir)
+            if (entryPoint == null) throw IOException("Не знайдено точку входу (html або js)")
+            
+            val relativePath = entryPoint.relativeTo(bundleDir).path
+            prefs.edit().putString("entry_point_path", relativePath).apply()
+            
+            Log.d(TAG, "Встановлено! Точка входу: $relativePath")
             Unit
-        }.onFailure {
-            Log.e(TAG, "Verification or extraction failed", it)
+        }.onFailure { Log.e(TAG, "Verify/Extract failed", it) }
+    }
+
+    private fun findEntryPoint(root: File): File? {
+        // 1. Шукаємо index.html у будь-якій папці (public, dist, корінь)
+        val htmlFiles = root.walkTopDown().filter { it.extension.lowercase() == "html" }.toList()
+        
+        // Пріоритет для index.html
+        val indexHtml = htmlFiles.find { it.name.lowercase() == "index.html" }
+        if (indexHtml != null) return indexHtml
+        
+        // Будь-який інший HTML файл
+        if (htmlFiles.isNotEmpty()) return htmlFiles.first()
+
+        // 2. Якщо HTML немає, шукаємо index.js або main.js і створюємо обгортку
+        val jsFiles = root.walkTopDown().filter { it.extension.lowercase() == "js" }.toList()
+        val mainJs = jsFiles.find { it.name.lowercase() == "index.js" || it.name.lowercase() == "main.js" }
+        
+        if (mainJs != null) {
+            return createHtmlWrapper(mainJs, root)
         }
+
+        return null
+    }
+
+    private fun createHtmlWrapper(jsFile: File, bundleRoot: File): File {
+        val wrapper = File(jsFile.parentFile, "index_generated.html")
+        // Шукаємо стилі поруч
+        val cssFile = jsFile.parentFile?.listFiles()?.find { it.extension.lowercase() == "css" }
+        val cssTag = if (cssFile != null) "<link rel=\"stylesheet\" href=\"${cssFile.name}\">" else ""
+
+        wrapper.writeText("""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                $cssTag
+            </head>
+            <body>
+                <div id="root"></div>
+                <div id="app"></div>
+                <script src="${jsFile.name}"></script>
+            </body>
+            </html>
+        """.trimIndent())
+        
+        Log.d(TAG, "Generated HTML wrapper for ${jsFile.name}")
+        return wrapper
+    }
+
+    private fun countZipEntries(zipFile: File): Int {
+        return try {
+            var count = 0
+            ZipInputStream(zipFile.inputStream().buffered()).use { zis ->
+                while (zis.nextEntry != null) {
+                    count++
+                    zis.closeEntry()
+                }
+            }
+            count
+        } catch (e: Exception) { 0 }
     }
 
     fun saveCurrentVersion(version: String) {
@@ -191,7 +226,9 @@ class UpdaterRepository @Inject constructor(
     }
 
     fun getLocalBundlePath(): String? {
-        val entry = File(context.filesDir, "${AppConfig.BUNDLE_DIR_NAME}/${AppConfig.WEB_ENTRY_POINT}")
+        val bundleDir = File(context.filesDir, AppConfig.BUNDLE_DIR_NAME)
+        val relativePath = prefs.getString("entry_point_path", AppConfig.WEB_ENTRY_POINT)
+        val entry = File(bundleDir, relativePath ?: AppConfig.WEB_ENTRY_POINT)
         return if (entry.exists()) entry.absolutePath else null
     }
 }
