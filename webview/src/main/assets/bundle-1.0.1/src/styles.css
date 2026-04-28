@@ -1,0 +1,80 @@
+:root {
+    --primary: #6750a4;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui;
+    background: #0f0f10;
+    color: white;
+}
+
+.app-container {
+    padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+}
+
+.content {
+    padding-bottom: 80px;
+}
+
+.card {
+    background: #1c1c1f;
+    border-radius: 28px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    display: flex;
+    justify-content: space-around;
+    background: #1c1c1f;
+}
+
+.bottom-nav button {
+    background: none;
+    border: none;
+    color: white;
+}
+
+.bottom-nav .active {
+    color: var(--primary);
+}
+
+button {
+    background: var(--primary);
+    border: none;
+    padding: 12px;
+    border-radius: 16px;
+    color: white;
+    margin: 8px 0;
+}
+
+.video {
+    width: 100%;
+    border-radius: 16px;
+}
+
+.skeleton {
+    height: 100px;
+    border-radius: 16px;
+    background: linear-gradient(90deg,
+            #2a2a2d 25%,
+            #3a3a3d 50%,
+            #2a2a2d 75%);
+    animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200px 0;
+    }
+
+    100% {
+        background-position: 200px 0;
+    }
+}
