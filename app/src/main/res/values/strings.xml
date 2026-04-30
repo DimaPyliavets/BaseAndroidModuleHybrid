@@ -13,6 +13,12 @@
     <string name="overlay_installing">Installing...</string>
     <string name="overlay_applying">Applying update</string>
 
+    <!-- Restart Dialog -->
+    <string name="restart_dialog_title">Update Applied</string>
+    <string name="restart_dialog_text">The application has been updated. A restart is required to apply changes. Restart now?</string>
+    <string name="restart_confirm">Restart</string>
+    <string name="restart_later">Later</string>
+
     <!-- Errors -->
     <string name="error_connection">Connection error</string>
     <string name="error_download">Download failed</string>

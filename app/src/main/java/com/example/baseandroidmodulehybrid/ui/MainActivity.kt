@@ -1,11 +1,11 @@
 package com.example.baseandroidmodulehybrid.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
-import android.view.WindowManager
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,11 +22,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.baseandroidmodulehybrid.R
 import com.example.baseandroidmodulehybrid.bridge.NativeBridge
@@ -36,6 +35,7 @@ import com.example.baseandroidmodulehybrid.webview.HybridWebView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.system.exitProcess
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -53,7 +53,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Transparency for status and navigation bars
         enableEdgeToEdge()
         
         if (0 != (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE)) {
@@ -69,29 +68,30 @@ class MainActivity : ComponentActivity() {
         setContent {
             val updateState by updaterViewModel.updateState.collectAsState()
             val installedBundlePath by updaterViewModel.installedBundlePath.collectAsState()
-            val currentVersion by updaterViewModel.currentVersion.collectAsState()
             val snackbarHostState = remember { SnackbarHostState() }
             val configuration = LocalConfiguration.current
             val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            val context = LocalContext.current
 
-            // Localization
-            val successMsg = stringResource(R.string.snack_update_success)
-            val upToDateMsg = stringResource(R.string.snack_up_to_date)
-            val errorMsg = stringResource(R.string.error_unknown)
-
-            LaunchedEffect(updateState) {
-                when (updateState) {
-                    is UpdateState.Error -> {
-                        snackbarHostState.showSnackbar(getString((updateState as UpdateState.Error).messageResId))
+            // Show Restart Dialog when update is successful
+            if (updateState is UpdateState.Success) {
+                AlertDialog(
+                    onDismissRequest = { updaterViewModel.resetState() },
+                    title = { Text(stringResource(R.string.restart_dialog_title)) },
+                    text = { Text(stringResource(R.string.restart_dialog_text)) },
+                    confirmButton = {
+                        Button(onClick = {
+                            restartApp(context)
+                        }) {
+                            Text(stringResource(R.string.restart_confirm))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { updaterViewModel.resetState() }) {
+                            Text(stringResource(R.string.restart_later))
+                        }
                     }
-                    is UpdateState.Success -> {
-                        snackbarHostState.showSnackbar(successMsg)
-                    }
-                    is UpdateState.UpToDate -> {
-                        snackbarHostState.showSnackbar(upToDateMsg)
-                    }
-                    else -> {}
-                }
+                )
             }
 
             if (updateState is UpdateState.ReadyToInstall) {
@@ -155,7 +155,6 @@ class MainActivity : ComponentActivity() {
                     }
 
                     if (isLandscape) {
-                        // Small floating Update button for landscape
                         Box(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
                             FilledTonalButton(
                                 onClick = { updaterViewModel.checkAndUpdate(force = true) },
@@ -176,6 +175,15 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun restartApp(context: android.content.Context) {
+        val packageManager = context.packageManager
+        val intent = packageManager.getLaunchIntentForPackage(context.packageName)
+        val componentName = intent?.component
+        val mainIntent = Intent.makeRestartActivityTask(componentName)
+        context.startActivity(mainIntent)
+        exitProcess(0)
     }
 
     @Composable
@@ -240,7 +248,6 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
-        // Memory (Storage) permissions for older Android versions
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
             permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)

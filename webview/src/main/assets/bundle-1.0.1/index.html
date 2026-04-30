@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hybrid Sheet App</title>
+<title>Hybrid Test Dashboard</title>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 :root {
   --accent:#0078d4;
-  --bg:#f3f3f3;
+  --bg:#f2f2f2;
   --card:#fff;
   --text:#111;
 }
@@ -28,7 +28,7 @@ body {
   color:var(--text);
 }
 
-/* UI */
+/* HEADER */
 .header {
   display:flex;
   flex-wrap:wrap;
@@ -38,40 +38,65 @@ body {
 }
 
 button {
-  padding:10px;
   border:none;
+  padding:10px;
   background:var(--accent);
   color:#fff;
   border-radius:4px;
+  cursor:pointer;
 }
 
 button.secondary { background:#666; }
-button.light { background:#ddd; color:#000; }
 button.danger { background:#d83b01; }
+button.light { background:#ddd; color:#000; }
 
-.container { padding:10px; }
-
-.table-wrap {
-  overflow:auto;
-  background:var(--card);
+/* GRID */
+.grid {
+  display:grid;
+  grid-template-columns: 1fr 2fr;
+  gap:10px;
+  padding:10px;
 }
 
-table { border-collapse:collapse; width:100%; }
-td, th {
+@media(max-width:800px){
+  .grid {
+    grid-template-columns:1fr;
+  }
+}
+
+/* CARDS */
+.card {
+  background:var(--card);
+  padding:10px;
+  border-radius:6px;
+}
+
+/* TABLE */
+.table-wrap {
+  overflow:auto;
+  max-height:50vh;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+}
+
+th, td {
   border:1px solid #ccc;
-  padding:8px;
+  padding:6px;
   min-width:100px;
 }
 
-.filters {
-  display:flex;
-  gap:6px;
-  overflow:auto;
-  margin-bottom:6px;
+td[contenteditable] {
+  outline:none;
 }
 
-.filters input {
+/* INPUTS */
+input {
+  width:100%;
   padding:6px;
+  margin-bottom:5px;
 }
 </style>
 </head>
@@ -81,77 +106,84 @@ td, th {
 <div class="header">
 <input type="file" id="fileInput">
 
-<button onclick="createSheet()">New</button>
+<button onclick="loadSample()">Load Sample</button>
 <button onclick="exportExcel()">Export</button>
 <button onclick="printTable()">Print</button>
 <button class="light" onclick="toggleDark()">Theme</button>
-<button class="light" onclick="saveData()">Save</button>
 
 <button class="secondary" onclick="notify()">Notify</button>
 <button class="secondary" onclick="vibrate()">Vibrate</button>
-<button class="secondary" onclick="getDevice()">Device</button>
-<button class="secondary" onclick="syncToNative()">Sync</button>
+<button class="secondary" onclick="deviceInfo()">Device</button>
+<button class="secondary" onclick="sync()">Sync</button>
 </div>
 
-<div class="container">
+<div class="grid">
 
-<div class="filters" id="filters"></div>
+<!-- LEFT PANEL -->
+<div class="card">
+<h3>Actions</h3>
 
+<button onclick="addRow()">Add Row</button>
+<button class="danger" onclick="deleteRow()">Delete Row</button>
+
+<hr>
+
+<h3>Filters</h3>
+<div id="filters"></div>
+
+<hr>
+
+<h3>Stats</h3>
+<div id="stats"></div>
+</div>
+
+<!-- TABLE -->
+<div class="card">
 <div class="table-wrap">
 <table>
 <thead><tr id="headerRow"></tr></thead>
 <tbody id="body"></tbody>
 </table>
 </div>
-
-<div style="margin-top:10px; display:flex; gap:10px;">
-<button onclick="addRow()">Add</button>
-<button class="danger" onclick="deleteRow()">Delete</button>
 </div>
 
 </div>
 
 <script>
 let data=[];
-let filteredData=[];
 let headers=[];
+let filteredData=[];
 let selectedRow=null;
 
-/* ---------- ANDROID BRIDGE SAFE ---------- */
+/* ANDROID */
 function isAndroid(){
-  return typeof window.Android !== "undefined";
+  return typeof window.Android!=="undefined";
 }
 
-/* ---------- NATIVE CALLS ---------- */
+/* NATIVE */
 function notify(){
-  if(isAndroid()){
-    window.Android.showNotification("Sheet App","Action executed");
-  } else {
-    alert("Notification test");
-  }
+  isAndroid()
+    ? window.Android.showNotification("Test","Working")
+    : alert("Notification");
 }
 
 function vibrate(){
-  if(isAndroid()){
-    window.Android.vibrate(200);
-  } else {
-    navigator.vibrate?.(200);
-  }
+  isAndroid()
+    ? window.Android.vibrate(200)
+    : navigator.vibrate?.(200);
 }
 
-function getDevice(){
+function deviceInfo(){
   if(isAndroid()){
     let info=JSON.parse(window.Android.getDeviceInfo());
-    alert("Model: "+info.model+"\nAndroid: "+info.androidVersion);
-  } else {
-    alert("Browser mode");
-  }
+    alert(info.model+" | Android "+info.androidVersion);
+  } else alert("Browser mode");
 }
 
-function syncToNative(){
-  const payload={
-    title:"Rows: "+data.length,
-    subtitle:"Last sync "+Date.now()
+function sync(){
+  let payload={
+    title:"Rows "+data.length,
+    subtitle:"Time "+Date.now()
   };
 
   if(isAndroid()){
@@ -160,15 +192,27 @@ function syncToNative(){
   }
 }
 
-/* ---------- TABLE ---------- */
+/* SAMPLE */
+function loadSample(){
+  headers=["Name","Age","Country"];
+  data=[
+    ["John",25,"USA"],
+    ["Anna",30,"UK"],
+    ["Max",22,"DE"]
+  ];
+  renderAll();
+}
+
+/* TABLE */
 function renderAll(){
   renderFilters();
   applyFilters();
+  updateStats();
 }
 
 function renderTable(){
-  const body=document.getElementById("body");
-  const headerRow=document.getElementById("headerRow");
+  let body=document.getElementById("body");
+  let headerRow=document.getElementById("headerRow");
 
   body.innerHTML="";
   headerRow.innerHTML="";
@@ -200,35 +244,35 @@ function renderTable(){
   });
 }
 
-/* ---------- FILTER ---------- */
+/* FILTER */
 function renderFilters(){
-  let container=document.getElementById("filters");
-  container.innerHTML="";
+  let c=document.getElementById("filters");
+  c.innerHTML="";
 
   headers.forEach((h,i)=>{
-    let input=document.createElement("input");
-    input.placeholder="Filter "+h;
-    input.dataset.index=i;
-    input.oninput=applyFilters;
-    container.appendChild(input);
+    let inp=document.createElement("input");
+    inp.placeholder="Filter "+h;
+    inp.dataset.index=i;
+    inp.oninput=applyFilters;
+    c.appendChild(inp);
   });
 }
 
 function applyFilters(){
   let inputs=document.querySelectorAll("#filters input");
 
-  filteredData=data.filter(row=>{
+  filteredData=data.filter(r=>{
     return [...inputs].every(inp=>{
       let val=inp.value.toLowerCase();
       if(!val) return true;
-      return (row[inp.dataset.index]||"").toLowerCase().includes(val);
+      return (r[inp.dataset.index]||"").toLowerCase().includes(val);
     });
   });
 
   renderTable();
 }
 
-/* ---------- CRUD ---------- */
+/* CRUD */
 function addRow(){
   data.push(Array(headers.length).fill(""));
   renderAll();
@@ -236,20 +280,20 @@ function addRow(){
 
 function deleteRow(){
   if(selectedRow!=null){
-    let row=filteredData[selectedRow];
-    data.splice(data.indexOf(row),1);
+    let r=filteredData[selectedRow];
+    data.splice(data.indexOf(r),1);
     selectedRow=null;
     renderAll();
   }
 }
 
-function createSheet(){
-  headers=["Column 1","Column 2"];
-  data=[];
-  renderAll();
+/* STATS */
+function updateStats(){
+  document.getElementById("stats").innerHTML =
+    "Rows: "+data.length+"<br>Columns: "+headers.length;
 }
 
-/* ---------- FILE ---------- */
+/* FILE */
 fileInput.onchange=e=>{
   let reader=new FileReader();
 
@@ -260,51 +304,29 @@ fileInput.onchange=e=>{
 
     if(!json.length) return;
 
-    let first=json[0];
-    let isHeader=first.some(x=>isNaN(x));
-
-    if(isHeader){
-      headers=first;
-      data=json.slice(1);
-    } else {
-      headers=first.map((_,i)=>"Column "+(i+1));
-      data=json;
-    }
-
-    normalize();
+    headers=json[0];
+    data=json.slice(1);
     renderAll();
   };
 
   reader.readAsBinaryString(e.target.files[0]);
 };
 
-function normalize(){
-  let cols=headers.length;
-
-  data=data.map(r=>{
-    let row=[...r];
-    while(row.length<cols) row.push("");
-    return row.slice(0,cols);
-  });
-}
-
-/* ---------- EXPORT ---------- */
+/* EXPORT */
 function exportExcel(){
   let ws=XLSX.utils.aoa_to_sheet([headers,...data]);
   let wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,"Sheet");
-  XLSX.writeFile(wb,"data.xlsx");
+  XLSX.writeFile(wb,"test.xlsx");
 }
 
-/* ---------- PRINT ---------- */
+/* PRINT */
 function printTable(){
   let html="<table border='1'>";
   html+="<tr>"+headers.map(h=>"<th>"+h+"</th>").join("")+"</tr>";
-
   data.forEach(r=>{
     html+="<tr>"+r.map(c=>"<td>"+c+"</td>").join("")+"</tr>";
   });
-
   html+="</table>";
 
   let w=window.open("");
@@ -312,35 +334,13 @@ function printTable(){
   w.print();
 }
 
-/* ---------- STORAGE ---------- */
-function saveData(){
-  localStorage.setItem("sheet",JSON.stringify({headers,data}));
-
-  if(isAndroid()){
-    notify();
-  }
-}
-
-function loadData(){
-  let s=localStorage.getItem("sheet");
-  if(s){
-    let p=JSON.parse(s);
-    headers=p.headers||[];
-    data=p.data||[];
-  }
-  filteredData=data;
-}
-
-/* ---------- THEME ---------- */
+/* THEME */
 function toggleDark(){
   document.body.classList.toggle("dark");
 }
 
 /* INIT */
-window.onload=()=>{
-  loadData();
-  renderAll();
-};
+window.onload=loadSample;
 </script>
 
 </body>
