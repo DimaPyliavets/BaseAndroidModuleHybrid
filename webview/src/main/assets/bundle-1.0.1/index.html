@@ -1,840 +1,244 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uk">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes"
-    />
-    <title>SoftLimit — ваш м'який лічильник дня</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        -webkit-tap-highlight-color: transparent;
-      }
-
-      /* М'яка, повітряна основа */
-      body,
-      html {
-        height: 100%;
-        width: 100%;
-        background: linear-gradient(145deg, #fefaf5 0%, #f9f3e8 100%);
-        font-family:
-          "Inter",
-          system-ui,
-          -apple-system,
-          "Segoe UI",
-          "Helvetica Neue",
-          sans-serif;
-        color: #2d3a3f;
-      }
-
-      /* Головний контейнер — на всю висоту */
-      .app {
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
-        max-width: 600px;
-        margin: 0 auto;
-        background: rgba(255, 255, 245, 0.96);
-        backdrop-filter: blur(2px);
-        box-shadow: 0 0 40px rgba(0, 0, 0, 0.02);
-        position: relative;
-      }
-
-      /* Екрани */
-      .screen {
-        flex: 1;
-        display: none;
-        padding: 28px 24px 32px 24px;
-        animation: softFade 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
-      }
-
-      .screen.active {
-        display: flex;
-        flex-direction: column;
-      }
-
-      @keyframes softFade {
-        0% {
-          opacity: 0;
-          transform: translateY(12px);
-        }
-        100% {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      /* Заголовки */
-      h1 {
-        font-size: 1.9rem;
-        font-weight: 580;
-        letter-spacing: -0.3px;
-        background: linear-gradient(135deg, #d96c2b, #f3a261);
-        background-clip: text;
-        -webkit-background-clip: text;
-        color: transparent;
-        margin-bottom: 4px;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-      }
-
-      .header-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        margin-bottom: 14px;
-        flex-wrap: wrap;
-      }
-
-      /* Коло прогресу — елегантне та м'яке */
-      .progress-section {
-        display: flex;
-        justify-content: center;
-        margin: 18px 0 20px;
-      }
-
-      .progress-wrapper {
-        position: relative;
-        width: 240px;
-        height: 240px;
-      }
-
-      svg {
-        transform: rotate(-90deg);
-        width: 100%;
-        height: 100%;
-        filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.05));
-      }
-
-      circle {
-        fill: none;
-        stroke-width: 14;
-        transition: stroke-dashoffset 0.55s ease-out;
-      }
-
-      .bg-circle {
-        stroke: #efe3d4;
-        stroke-width: 12;
-      }
-
-      .progress-circle {
-        stroke: url(#softGradient);
-        stroke-linecap: round;
-        stroke-dasharray: 565.48;
-        stroke-dashoffset: 565.48;
-        filter: drop-shadow(0 3px 6px rgba(217, 108, 43, 0.2));
-      }
-
-      .progress-text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center;
-        width: 100%;
-      }
-
-      .progress-text span {
-        font-size: 58px;
-        font-weight: 700;
-        background: linear-gradient(to bottom, #4a3b2c, #c96a2b);
-        background-clip: text;
-        -webkit-background-clip: text;
-        color: transparent;
-        line-height: 1;
-      }
-
-      .progress-text small {
-        display: block;
-        font-size: 0.85rem;
-        font-weight: 500;
-        background: #fff3e9;
-        padding: 5px 12px;
-        border-radius: 40px;
-        margin-top: 8px;
-        color: #ba6b36;
-        letter-spacing: 0.3px;
-      }
-
-      /* кнопки дій — м'які та об'ємні */
-      .action-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 14px;
-        margin: 18px 0 12px;
-      }
-
-      .btn {
-        flex: 1 1 auto;
-        padding: 14px 8px;
-        border-radius: 56px;
-        font-weight: 590;
-        font-size: 1rem;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        background: #ffffffcc;
-        backdrop-filter: blur(8px);
-        color: #46372a;
-        box-shadow:
-          0 4px 12px rgba(0, 0, 0, 0.03),
-          0 1px 1px rgba(0, 0, 0, 0.02);
-        font-family: inherit;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-      }
-
-      .btn-primary {
-        background: linear-gradient(105deg, #ffb347, #ff8c42);
-        color: white;
-        box-shadow: 0 8px 18px rgba(255, 140, 66, 0.25);
-        border: none;
-      }
-
-      .btn-primary:active {
-        transform: scale(0.96);
-        background: #f17e2e;
-      }
-
-      .btn-secondary {
-        background: #f7efe7;
-        border: 1px solid #ffd9b5;
-        color: #af5f2e;
-      }
-
-      .btn-secondary:active {
-        background: #ffe6d5;
-        transform: scale(0.97);
-      }
-
-      .btn-outline {
-        background: #fdf9f5;
-        border: 1px solid #faddb7;
-        color: #a25f33;
-      }
-
-      /* стан ліміту */
-      .limit-badge {
-        background: #fff2e6;
-        border-radius: 48px;
-        padding: 8px 20px;
-        text-align: center;
-        margin-top: 16px;
-        font-size: 0.85rem;
-        color: #b1622e;
-        font-weight: 500;
-      }
-
-      /* Історія — списки з м'якими картками */
-      .history-container {
-        flex: 1;
-        overflow-y: auto;
-        margin-top: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        padding-right: 4px;
-        max-height: 55vh;
-      }
-
-      .history-card {
-        background: white;
-        border-radius: 28px;
-        padding: 14px 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow:
-          0 4px 12px rgba(0, 0, 0, 0.02),
-          0 1px 2px rgba(0, 0, 0, 0.03);
-        transition: all 0.2s;
-        border: 1px solid #ffead8;
-      }
-
-      .history-time {
-        font-size: 0.8rem;
-        font-weight: 500;
-        color: #ac7b55;
-        background: #fef3ea;
-        padding: 4px 12px;
-        border-radius: 30px;
-      }
-
-      .history-action {
-        font-weight: 500;
-        color: #3f2d1f;
-        font-size: 0.9rem;
-      }
-
-      .clear-btn {
-        background: transparent;
-        border: none;
-        color: #d98c4a;
-        font-size: 0.8rem;
-        font-weight: 500;
-        padding: 8px 18px;
-        border-radius: 50px;
-        transition: 0.15s;
-        cursor: pointer;
-      }
-
-      .clear-btn:active {
-        background: #ffe0ca;
-      }
-
-      /* Навігація внизу м'яка */
-      .nav-bar {
-        background: rgba(255, 252, 245, 0.94);
-        backdrop-filter: blur(16px);
-        display: flex;
-        justify-content: space-around;
-        padding: 10px 0 22px 0;
-        border-top: 1px solid #ffe2cc;
-        margin-top: auto;
-      }
-
-      .nav-btn {
-        background: none;
-        border: none;
-        font-size: 1rem;
-        font-weight: 540;
-        padding: 8px 28px;
-        border-radius: 60px;
-        color: #917b64;
-        transition: all 0.2s;
-        cursor: pointer;
-        font-family: inherit;
-      }
-
-      .nav-btn.active-nav {
-        background: #ffe1ca;
-        color: #c25e26;
-        font-weight: 560;
-        box-shadow:
-          inset 0 0 0 1px #ffd0ae,
-          0 2px 6px rgba(0, 0, 0, 0.02);
-      }
-
-      /* кастомний модальний діалог (м'який) */
-      .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(70, 55, 40, 0.4);
-        backdrop-filter: blur(6px);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 1000;
-        visibility: hidden;
-        opacity: 0;
-        transition: 0.2s ease;
-      }
-
-      .modal-overlay.active-modal {
-        visibility: visible;
-        opacity: 1;
-      }
-
-      .modal-card {
-        background: #fffbf7;
-        border-radius: 48px;
-        width: 280px;
-        padding: 28px 20px 32px;
-        text-align: center;
-        box-shadow: 0 25px 40px rgba(0, 0, 0, 0.2);
-        border: 1px solid #ffe4ce;
-      }
-
-      .modal-card h3 {
-        font-size: 1.6rem;
-        font-weight: 500;
-        margin-bottom: 20px;
-        color: #754c2a;
-      }
-
-      .modal-card input {
-        width: 100%;
-        padding: 14px;
-        font-size: 1.2rem;
-        border-radius: 80px;
-        border: 1px solid #ffd6b5;
-        background: white;
-        text-align: center;
-        font-weight: 500;
-        margin-bottom: 20px;
-        outline: none;
-      }
-
-      .modal-actions {
-        display: flex;
-        gap: 12px;
-      }
-
-      .toast-msg {
-        position: fixed;
-        bottom: 100px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #2f3e46cc;
-        backdrop-filter: blur(12px);
-        padding: 10px 24px;
-        border-radius: 60px;
-        color: white;
-        font-weight: 500;
-        z-index: 1100;
-        font-size: 0.85rem;
-        pointer-events: none;
-        animation: fadeToast 1.8s ease forwards;
-      }
-
-      @keyframes fadeToast {
-        0% {
-          opacity: 0;
-          transform: translateX(-50%) translateY(10px);
-        }
-        15% {
-          opacity: 1;
-          transform: translateX(-50%) translateY(0);
-        }
-        85% {
-          opacity: 1;
-          transform: translateX(-50%) translateY(0);
-        }
-        100% {
-          opacity: 0;
-          transform: translateX(-50%) translateY(-8px);
-          visibility: hidden;
-        }
-      }
-
-      /* scrollbar м'який */
-      .history-container::-webkit-scrollbar {
-        width: 4px;
-      }
-      .history-container::-webkit-scrollbar-track {
-        background: #f3e7dd;
-        border-radius: 10px;
-      }
-      .history-container::-webkit-scrollbar-thumb {
-        background: #f0ba89;
-        border-radius: 10px;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="app">
-      <!-- ЕКРАН ЛІМІТУ / СЬОГОДНІ -->
-      <div id="screen-limit" class="screen active">
-        <div class="header-row">
-          <h1>📆 сьогодні</h1>
-          <span class="limit-badge" id="dailyLimitLabel">ліміт 20</span>
-        </div>
-
-        <div class="progress-section">
-          <div class="progress-wrapper">
-            <svg viewBox="0 0 220 220">
-              <defs>
-                <linearGradient
-                  id="softGradient"
-                  x1="0%"
-                  y1="0%"
-                  x2="100%"
-                  y2="100%"
-                >
-                  <stop offset="0%" stop-color="#FFB067" />
-                  <stop offset="100%" stop-color="#FF8533" />
-                </linearGradient>
-              </defs>
-              <circle cx="110" cy="110" r="90" class="bg-circle" />
-              <circle
-                cx="110"
-                cy="110"
-                r="90"
-                class="progress-circle"
-                id="progressCircle"
-              />
-            </svg>
-            <div class="progress-text">
-              <span id="remainingValue">0</span>
-              <small id="limitCaption">з 20</small>
-            </div>
-          </div>
-        </div>
-
-        <div class="action-grid">
-          <button class="btn btn-primary" id="useMinusBtn">
-            ➖ використати 1
-          </button>
-          <button class="btn btn-secondary" id="usePlusBtn">➕ додати 1</button>
-        </div>
-        <div class="action-grid">
-          <button class="btn btn-outline" id="setLimitBtn">
-            🎯 змінити ліміт
-          </button>
-          <button class="btn btn-outline" id="resetDayBtn">
-            🌀 скинути день
-          </button>
-        </div>
-        <div class="limit-badge" style="background: #faf0e7; margin-top: 8px">
-          💡 натискайте «використати» — залишок зменшується
-        </div>
-      </div>
-
-      <!-- ЕКРАН ІСТОРІЇ -->
-      <div id="screen-history" class="screen">
-        <div class="header-row">
-          <h1>📋 активність</h1>
-          <button id="clearHistoryBtn" class="clear-btn">очистити</button>
-        </div>
-        <div id="historyList" class="history-container">
-          <!-- історія буде рендеритись динамічно -->
-        </div>
-      </div>
-
-      <!-- нижня навігація -->
-      <div class="nav-bar">
-        <button class="nav-btn active-nav" id="navLimitBtn">Ліміт</button>
-        <button class="nav-btn" id="navHistoryBtn">Історія</button>
-      </div>
-    </div>
-
-    <!-- кастомний модал для введення ліміту -->
-    <div id="modalOverlay" class="modal-overlay">
-      <div class="modal-card">
-        <h3>новий ліміт</h3>
-        <input
-          type="number"
-          id="modalLimitInput"
-          placeholder="ціле число"
-          value="20"
-          min="1"
-          step="1"
-        />
-        <div class="modal-actions">
-          <button class="btn btn-outline" id="modalCancelBtn" style="flex: 1">
-            скасувати
-          </button>
-          <button class="btn btn-primary" id="modalConfirmBtn" style="flex: 1">
-            зберегти
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <script>
-      // ---------- СТАН ПРОГРАМИ ----------
-      let remaining = 0; // скільки залишилось (value)
-      let dailyLimit = 20; // ліміт
-
-      let historyLog = []; // кожен запис { time: string, actionText: string }
-
-      // DOM елементи
-      const remainingSpan = document.getElementById("remainingValue");
-      const limitCaptionSpan = document.getElementById("limitCaption");
-      const dailyLimitLabelSpan = document.getElementById("dailyLimitLabel");
-      const progressCircle = document.getElementById("progressCircle");
-      const historyContainer = document.getElementById("historyList");
-
-      // допоміжна довжина кола
-      const CIRC = 2 * Math.PI * 90; // ≈565.48
-
-      // Функція оновлення прогресу та текстів
-      function updateUI() {
-        remainingSpan.innerText = remaining;
-        limitCaptionSpan.innerText = `з ${dailyLimit}`;
-        dailyLimitLabelSpan.innerText = `ліміт ${dailyLimit}`;
-
-        // використано = dailyLimit - remaining (не більше ліміту)
-        let used = Math.max(0, dailyLimit - remaining);
-        let usedPercent = dailyLimit === 0 ? 0 : used / dailyLimit;
-        usedPercent = Math.min(1, Math.max(0, usedPercent));
-        const offset = CIRC - CIRC * usedPercent;
-        progressCircle.style.strokeDashoffset = offset;
-
-        // якщо залишок 0, легкий візуальний сигнал
-        if (remaining <= 0) {
-          remainingSpan.style.opacity = "0.9";
-        } else {
-          remainingSpan.style.opacity = "1";
-        }
-      }
-
-      // Збереження в локальне сховище
-      function saveToLocal() {
-        localStorage.setItem("softLimit_remaining", remaining);
-        localStorage.setItem("softLimit_dailyLimit", dailyLimit);
-        localStorage.setItem("softLimit_history", JSON.stringify(historyLog));
-      }
-
-      // Додати запис в історію
-      function addHistoryRecord(actionDesc, details = "") {
-        const now = new Date();
-        const timeStr = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-        let finalText = actionDesc;
-        if (details) finalText += ` ${details}`;
-        historyLog.unshift({
-          time: timeStr,
-          actionText: finalText,
-        });
-        // обмежуємо історію до 120 записів
-        if (historyLog.length > 120) historyLog.pop();
-        saveToLocal();
-        renderHistory();
-      }
-
-      // Відобразити історію
-      function renderHistory() {
-        if (!historyContainer) return;
-        if (historyLog.length === 0) {
-          historyContainer.innerHTML = `<div style="text-align:center; padding:36px 0; opacity:0.6;">✨ поки що тиша... зробіть перший крок</div>`;
-          return;
-        }
-        historyContainer.innerHTML = "";
-        historyLog.forEach((entry) => {
-          const card = document.createElement("div");
-          card.className = "history-card";
-          card.innerHTML = `
-        <div class="history-time">${entry.time}</div>
-        <div class="history-action">${entry.actionText}</div>
-      `;
-          historyContainer.appendChild(card);
-        });
-      }
-
-      // Коригування липких значень
-      function clampValues() {
-        if (remaining > dailyLimit) remaining = dailyLimit;
-        if (remaining < 0) remaining = 0;
-        if (dailyLimit < 1) dailyLimit = 1;
-      }
-
-      // повне оновлення та збереження
-      function syncAndRender() {
-        clampValues();
-        updateUI();
-        saveToLocal();
-      }
-
-      // ДІЇ
-      function useOne() {
-        if (remaining <= 0) {
-          showToast("❌ Ліміт вичерпано! Скиньте день або збільште ліміт");
-          return;
-        }
-        remaining--;
-        clampValues();
-        addHistoryRecord("🔽 використано 1", `залишок ${remaining}`);
-        syncAndRender();
-        if (navigator.vibrate) navigator.vibrate(15);
-      }
-
-      function addOne() {
-        if (remaining >= dailyLimit) {
-          showToast(`⚠️ Вже досягнуто ліміту (${dailyLimit})`);
-          return;
-        }
-        remaining++;
-        clampValues();
-        addHistoryRecord("🔼 додано +1", `залишок ${remaining}`);
-        syncAndRender();
-        if (navigator.vibrate) navigator.vibrate(10);
-      }
-
-      function resetDay() {
-        const oldRemaining = remaining;
-        remaining = dailyLimit;
-        clampValues();
-        addHistoryRecord("🌀 скидання дня", `${oldRemaining} → ${remaining}`);
-        syncAndRender();
-        showToast("✅ День оновлено, залишок повний");
-      }
-
-      // модальне вікно для зміни ліміту
-      let modalOverlay = document.getElementById("modalOverlay");
-      let modalInput = document.getElementById("modalLimitInput");
-
-      function openLimitModal() {
-        modalInput.value = dailyLimit;
-        modalOverlay.classList.add("active-modal");
-      }
-
-      function closeModal() {
-        modalOverlay.classList.remove("active-modal");
-      }
-
-      function applyNewLimit() {
-        let newLimit = parseInt(modalInput.value, 10);
-        if (isNaN(newLimit) || newLimit <= 0) {
-          showToast("Будь ласка, введіть число більше 0");
-          return;
-        }
-        const oldLimit = dailyLimit;
-        const previouslyUsed = Math.max(0, oldLimit - remaining);
-        dailyLimit = newLimit;
-        // корегуємо залишок: новий ліміт мінус використане (але не менше 0)
-        let newRemaining = dailyLimit - previouslyUsed;
-        if (newRemaining < 0) newRemaining = 0;
-        remaining = newRemaining;
-        clampValues();
-        addHistoryRecord(
-          "🎯 змінено ліміт",
-          `${oldLimit} → ${dailyLimit} (залишок ${remaining})`,
-        );
-        syncAndRender();
-        closeModal();
-        showToast(`Ліміт оновлено → ${dailyLimit}`);
-      }
-
-      // очищення історії
-      function clearHistory() {
-        if (historyLog.length === 0) {
-          showToast("Історія вже порожня");
-          return;
-        }
-        if (confirm("Видалити всю історію активності?")) {
-          historyLog = [];
-          saveToLocal();
-          renderHistory();
-          addHistoryRecord("🧹 історію очищено", "");
-          // після очищення додамо запис про очищення, але щоб не дублювати - краще вище вже додає
-          syncAndRender();
-          showToast("Історію видалено");
-        }
-      }
-
-      // тости
-      function showToast(message) {
-        const existingToast = document.querySelector(".toast-msg");
-        if (existingToast) existingToast.remove();
-        const toast = document.createElement("div");
-        toast.className = "toast-msg";
-        toast.innerText = message;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 1800);
-      }
-
-      // навігація між екранами
-      function switchToTab(tabId) {
-        const limitScreen = document.getElementById("screen-limit");
-        const historyScreen = document.getElementById("screen-history");
-        const navLimit = document.getElementById("navLimitBtn");
-        const navHistory = document.getElementById("navHistoryBtn");
-
-        if (tabId === "limit") {
-          limitScreen.classList.add("active");
-          historyScreen.classList.remove("active");
-          navLimit.classList.add("active-nav");
-          navHistory.classList.remove("active-nav");
-        } else {
-          historyScreen.classList.add("active");
-          limitScreen.classList.remove("active");
-          navHistory.classList.add("active-nav");
-          navLimit.classList.remove("active-nav");
-          renderHistory(); // оновлюємо історію при переході
-        }
-      }
-
-      // ІНІЦІАЛІЗАЦІЯ ДАНИХ (localStorage)
-      function loadInitialData() {
-        const storedRemaining = localStorage.getItem("softLimit_remaining");
-        const storedLimit = localStorage.getItem("softLimit_dailyLimit");
-        const storedHistory = localStorage.getItem("softLimit_history");
-
-        if (storedLimit !== null && !isNaN(Number(storedLimit))) {
-          dailyLimit = Number(storedLimit);
-        } else {
-          dailyLimit = 20;
-        }
-
-        if (storedRemaining !== null && !isNaN(Number(storedRemaining))) {
-          remaining = Number(storedRemaining);
-        } else {
-          remaining = dailyLimit; // новий день — повний залишок
-        }
-
-        if (storedHistory) {
-          try {
-            let parsed = JSON.parse(storedHistory);
-            if (Array.isArray(parsed)) historyLog = parsed;
-            else historyLog = [];
-          } catch (e) {
-            historyLog = [];
-          }
-        } else {
-          historyLog = [];
-          // додаємо вітальний запис тільки якщо немає жодної історії
-          addHistoryRecord(
-            "✨ додаток активовано",
-            `ліміт ${dailyLimit}, залишок ${remaining}`,
-          );
-        }
-
-        // Коригування
-        clampValues();
-        updateUI();
-        renderHistory();
-        saveToLocal();
-      }
-
-      // ПОДІЇ КНОПОК
-      function bindEvents() {
-        document
-          .getElementById("useMinusBtn")
-          .addEventListener("click", useOne);
-        document.getElementById("usePlusBtn").addEventListener("click", addOne);
-        document
-          .getElementById("setLimitBtn")
-          .addEventListener("click", openLimitModal);
-        document
-          .getElementById("resetDayBtn")
-          .addEventListener("click", resetDay);
-        document
-          .getElementById("clearHistoryBtn")
-          .addEventListener("click", clearHistory);
-
-        // навігація
-        document
-          .getElementById("navLimitBtn")
-          .addEventListener("click", () => switchToTab("limit"));
-        document
-          .getElementById("navHistoryBtn")
-          .addEventListener("click", () => switchToTab("history"));
-
-        // модальні кнопки
-        document
-          .getElementById("modalConfirmBtn")
-          .addEventListener("click", applyNewLimit);
-        document
-          .getElementById("modalCancelBtn")
-          .addEventListener("click", closeModal);
-        modalOverlay.addEventListener("click", (e) => {
-          if (e.target === modalOverlay) closeModal();
-        });
-        // щоб при enter в інпуті спрацьовувало
-        modalInput.addEventListener("keypress", (e) => {
-          if (e.key === "Enter") applyNewLimit();
-        });
-      }
-
-      // запуск програми
-      function init() {
-        loadInitialData();
-        bindEvents();
-        // екран за замовчуванням: ліміт
-        switchToTab("limit");
-      }
-
-      init();
-    </script>
-  </body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spreadsheet PWA</title>
+
+<link rel="manifest" href="manifest.json">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+body { background:#f5f6f8; }
+body.dark { background:#121212; color:#fff; }
+
+.dark .table { color:#fff; }
+.dark td { background:#1e1e1e; }
+
+.table-container { max-height:60vh; overflow:auto; }
+td { min-width:120px; }
+td[contenteditable="true"] { background:#fff; }
+.dark td[contenteditable="true"] { background:#2a2a2a; }
+</style>
+</head>
+
+<body>
+
+<div class="container-fluid p-3">
+
+<!-- TOP BAR -->
+<div class="d-flex flex-wrap gap-2 mb-2">
+<input type="file" id="fileInput" class="form-control w-auto">
+
+<button class="btn btn-primary" onclick="createSheet()">New</button>
+<button class="btn btn-success" onclick="exportExcel()">Export</button>
+<button class="btn btn-secondary" onclick="window.print()">Print</button>
+<button class="btn btn-dark" onclick="toggleDark()">🌙</button>
+<button class="btn btn-outline-dark" onclick="saveData()">Save</button>
+</div>
+
+<!-- FILTERS -->
+<div class="row mb-2" id="filters"></div>
+
+<!-- TABLE -->
+<div class="table-container bg-white p-2 rounded shadow-sm">
+<table class="table table-bordered text-center" id="sheet">
+<thead><tr id="headerRow"></tr></thead>
+<tbody id="body"></tbody>
+</table>
+</div>
+
+<!-- ACTIONS -->
+<div class="mt-2 d-flex gap-2">
+<button class="btn btn-success" onclick="addRow()">Add Row</button>
+<button class="btn btn-danger" onclick="deleteRow()">Delete Row</button>
+</div>
+
+</div>
+
+<script>
+let data = [];
+let filteredData = [];
+let headers = [];
+let selectedRow = null;
+
+/* INIT */
+window.onload = () => {
+  loadData();
+  renderAll();
+};
+
+/* RENDER */
+function renderAll(){
+  renderFilters();
+  applyFilters();
+}
+
+function renderTable(){
+  const body = document.getElementById("body");
+  const headerRow = document.getElementById("headerRow");
+
+  headerRow.innerHTML = "";
+  body.innerHTML = "";
+
+  headers.forEach(h=>{
+    let th=document.createElement("th");
+    th.innerText=h;
+    headerRow.appendChild(th);
+  });
+
+  filteredData.forEach((row,i)=>{
+    let tr=document.createElement("tr");
+    tr.onclick=()=>selectedRow=i;
+
+    row.forEach((cell,j)=>{
+      let td=document.createElement("td");
+      td.contentEditable=true;
+      td.innerText=cell;
+
+      td.oninput=()=>{
+        let realIndex=data.indexOf(row);
+        data[realIndex][j]=td.innerText;
+      };
+
+      tr.appendChild(td);
+    });
+
+    body.appendChild(tr);
+  });
+}
+
+/* FILTERS */
+function renderFilters(){
+  let container=document.getElementById("filters");
+  container.innerHTML="";
+
+  headers.forEach((h,i)=>{
+    let input=document.createElement("input");
+    input.className="form-control col";
+    input.placeholder="Filter "+h;
+    input.dataset.index=i;
+    input.oninput=applyFilters;
+    container.appendChild(input);
+  });
+}
+
+function applyFilters(){
+  let inputs=document.querySelectorAll("#filters input");
+
+  filteredData=data.filter(row=>{
+    return [...inputs].every(inp=>{
+      let val=inp.value.toLowerCase();
+      if(!val) return true;
+      return (row[inp.dataset.index]||"").toString().toLowerCase().includes(val);
+    });
+  });
+
+  renderTable();
+}
+
+/* CRUD */
+function addRow(){
+  data.push(Array(headers.length).fill(""));
+  renderAll();
+}
+
+function deleteRow(){
+  if(selectedRow!=null){
+    let row=filteredData[selectedRow];
+    data.splice(data.indexOf(row),1);
+    selectedRow=null;
+    renderAll();
+  }
+}
+
+function createSheet(){
+  headers = ["Column 1","Column 2","Column 3"];
+  data = [];
+  renderAll();
+}
+
+/* SAVE */
+function saveData(){
+  localStorage.setItem("sheet", JSON.stringify({headers,data}));
+}
+
+function loadData(){
+  let saved = localStorage.getItem("sheet");
+  if(saved){
+    let parsed = JSON.parse(saved);
+    headers = parsed.headers || [];
+    data = parsed.data || [];
+  }
+  filteredData = data;
+}
+
+/* IMPORT */
+fileInput.onchange = e => {
+  let reader = new FileReader();
+
+  reader.onload = evt => {
+    let wb = XLSX.read(evt.target.result, { type: "binary" });
+    let sheet = wb.Sheets[wb.SheetNames[0]];
+    let json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+    if(json.length === 0) return;
+
+    let firstRow = json[0];
+
+    // визначаємо чи це headers
+    let isHeader = firstRow.some(cell => isNaN(cell));
+
+    if(isHeader){
+      headers = firstRow.map(h => h || "Column");
+      data = json.slice(1);
+    } else {
+      headers = firstRow.map((_,i)=>"Column "+(i+1));
+      data = json;
+    }
+
+    normalizeData();
+    renderAll();
+  };
+
+  reader.readAsBinaryString(e.target.files[0]);
+};
+
+/* NORMALIZE */
+function normalizeData(){
+  const cols = headers.length;
+
+  data = data.map(row=>{
+    let r=[...row];
+    while(r.length < cols) r.push("");
+    return r.slice(0, cols);
+  });
+}
+
+/* EXPORT */
+function exportExcel(){
+  let ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+  let wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet");
+  XLSX.writeFile(wb, "data.xlsx");
+}
+
+/* DARK MODE */
+function toggleDark(){
+  document.body.classList.toggle("dark");
+  localStorage.setItem("dark", document.body.classList.contains("dark"));
+}
+
+if(localStorage.getItem("dark")==="true"){
+  document.body.classList.add("dark");
+}
+
+/* PWA */
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js");
+}
+</script>
+
+</body>
 </html>

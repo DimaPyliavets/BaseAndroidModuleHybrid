@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    res/values/strings.xml
-    ⚠️ ЗМІНИТИ: локалізуй рядки, додай uk/strings.xml та інші мови
--->
 <resources>
-    <!-- ⚠️ ЗМІНИТИ: назва додатка що відображається на головному екрані -->
     <string name="app_name">Hybrid App</string>
-    <!-- ⚠️ ЗМІНИТИ: опис віджета у каталозі -->
-    <string name="widget_description">Відображає актуальні дані з додатка</string>
+    <string name="menu_update">Update</string>
+    <string name="update_dialog_title">Update Downloaded</string>
+    <string name="update_dialog_text">Version %1$s is ready. Do you want to install it now?</string>
+    <string name="update_install">Install</string>
+    <string name="update_cancel">Cancel</string>
+    <string name="snack_update_success">Update installed!</string>
+    <string name="snack_up_to_date">Your version is up to date</string>
+    <string name="overlay_checking">Checking updates...</string>
+    <string name="overlay_downloading">Downloading update</string>
+    <string name="overlay_installing">Installing...</string>
+    <string name="overlay_applying">Applying update</string>
+    <string name="error_connection">Connection error: %1$s</string>
+    <string name="error_download">Download failed</string>
+    <string name="error_install">Installation failed</string>
+    <string name="widget_description">Displays actual data from the application</string>
 </resources>
