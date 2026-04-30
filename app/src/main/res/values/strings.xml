@@ -19,6 +19,16 @@
     <string name="restart_confirm">Restart</string>
     <string name="restart_later">Later</string>
 
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_app_version">App Version: %1$s</string>
+    <string name="settings_web_version">Web Version: %1$s</string>
+    <string name="settings_clear_cache">Clear Cache</string>
+    <string name="settings_cache_cleared">Cache cleared successfully</string>
+    <string name="settings_restart_app">Restart Application</string>
+    <string name="settings_check_update">Check for Updates</string>
+    <string name="settings_back">Back</string>
+
     <!-- Errors -->
     <string name="error_connection">Connection error</string>
     <string name="error_download">Download failed</string>

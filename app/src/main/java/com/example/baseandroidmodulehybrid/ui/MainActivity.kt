@@ -1,41 +1,40 @@
 package com.example.baseandroidmodulehybrid.ui
 
-import android.Manifest
-import android.content.Intent
+import android.content.Context
 import android.content.pm.ApplicationInfo
-import android.content.res.Configuration
-import android.os.Build
 import android.os.Bundle
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
+import com.example.baseandroidmodulehybrid.BuildConfig
 import com.example.baseandroidmodulehybrid.R
 import com.example.baseandroidmodulehybrid.bridge.NativeBridge
-import com.example.baseandroidmodulehybrid.updater.UpdaterViewModel
+import com.example.baseandroidmodulehybrid.ui.components.*
 import com.example.baseandroidmodulehybrid.updater.UpdateState
+import com.example.baseandroidmodulehybrid.updater.UpdaterViewModel
+import com.example.baseandroidmodulehybrid.util.AppUtils
+import com.example.baseandroidmodulehybrid.util.PermissionUtils
 import com.example.baseandroidmodulehybrid.webview.HybridWebView
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.system.exitProcess
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -49,7 +48,6 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { _ -> }
 
-    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -59,200 +57,116 @@ class MainActivity : ComponentActivity() {
             WebView.setWebContentsDebuggingEnabled(true)
         }
 
-        requestRequiredPermissions()
+        requestPermissionLauncher.launch(PermissionUtils.getRequiredPermissions())
 
         lifecycleScope.launch {
             updaterViewModel.checkAndUpdate()
         }
 
         setContent {
-            val updateState by updaterViewModel.updateState.collectAsState()
-            val installedBundlePath by updaterViewModel.installedBundlePath.collectAsState()
-            val snackbarHostState = remember { SnackbarHostState() }
-            val configuration = LocalConfiguration.current
-            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            val context = LocalContext.current
-
-            // Show Restart Dialog when update is successful
-            if (updateState is UpdateState.Success) {
-                AlertDialog(
-                    onDismissRequest = { updaterViewModel.resetState() },
-                    title = { Text(stringResource(R.string.restart_dialog_title)) },
-                    text = { Text(stringResource(R.string.restart_dialog_text)) },
-                    confirmButton = {
-                        Button(onClick = {
-                            restartApp(context)
-                        }) {
-                            Text(stringResource(R.string.restart_confirm))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { updaterViewModel.resetState() }) {
-                            Text(stringResource(R.string.restart_later))
-                        }
-                    }
-                )
-            }
-
-            if (updateState is UpdateState.ReadyToInstall) {
-                val readyState = updateState as UpdateState.ReadyToInstall
-                AlertDialog(
-                    onDismissRequest = { updaterViewModel.resetState() },
-                    title = { Text(stringResource(R.string.update_dialog_title)) },
-                    text = { Text(stringResource(R.string.update_dialog_text, readyState.versionInfo.version)) },
-                    confirmButton = {
-                        Button(onClick = {
-                            updaterViewModel.completeInstallation(readyState.versionInfo, readyState.zipFile)
-                        }) {
-                            Text(stringResource(R.string.update_install))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { updaterViewModel.resetState() }) {
-                            Text(stringResource(R.string.update_cancel))
-                        }
-                    }
-                )
-            }
-
-            Scaffold(
-                topBar = {
-                    if (!isLandscape) {
-                        CenterAlignedTopAppBar(
-                            title = { 
-                                Text(
-                                    stringResource(R.string.app_name),
-                                    style = MaterialTheme.typography.titleLarge
-                                ) 
-                            },
-                            actions = {
-                                TextButton(onClick = { updaterViewModel.checkAndUpdate(force = true) }) {
-                                    Text(stringResource(R.string.menu_update))
-                                }
-                            },
-                            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                                containerColor = Color.Transparent,
-                                scrolledContainerColor = Color.Transparent
-                            )
-                        )
-                    }
-                },
-                snackbarHost = { SnackbarHost(snackbarHostState) },
-                containerColor = MaterialTheme.colorScheme.background,
-                contentWindowInsets = WindowInsets(0, 0, 0, 0)
-            ) { paddingValues ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(if (isLandscape) PaddingValues(0.dp) else paddingValues)
-                ) {
-                    key(installedBundlePath) {
-                        HybridWebView(
-                            modifier = Modifier.fillMaxSize(),
-                            bridge = nativeBridge,
-                            localBundlePath = installedBundlePath
-                        )
-                    }
-
-                    if (isLandscape) {
-                        Box(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
-                            FilledTonalButton(
-                                onClick = { updaterViewModel.checkAndUpdate(force = true) },
-                                modifier = Modifier.align(Alignment.TopEnd).height(32.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-                                )
-                            ) {
-                                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text(stringResource(R.string.menu_update), fontSize = 10.sp)
-                            }
-                        }
-                    }
-
-                    UpdateOverlay(updateState)
-                }
-            }
+            MainContent(updaterViewModel, nativeBridge)
         }
-    }
-
-    private fun restartApp(context: android.content.Context) {
-        val packageManager = context.packageManager
-        val intent = packageManager.getLaunchIntentForPackage(context.packageName)
-        val componentName = intent?.component
-        val mainIntent = Intent.makeRestartActivityTask(componentName)
-        context.startActivity(mainIntent)
-        exitProcess(0)
     }
 
     @Composable
-    fun UpdateOverlay(state: UpdateState) {
-        when (state) {
-            is UpdateState.Checking, is UpdateState.Downloading, is UpdateState.Extracting, UpdateState.Applying -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        tonalElevation = 2.dp
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            val title = when (state) {
-                                is UpdateState.Checking -> stringResource(R.string.overlay_checking)
-                                is UpdateState.Downloading -> stringResource(R.string.overlay_downloading)
-                                is UpdateState.Extracting -> stringResource(R.string.overlay_installing)
-                                else -> stringResource(R.string.overlay_applying)
-                            }
-                            
-                            val progressValue = when (state) {
-                                is UpdateState.Downloading -> state.progress / 100f
-                                is UpdateState.Extracting -> state.progress / 100f
-                                else -> null
-                            }
+    private fun MainContent(
+        updaterViewModel: UpdaterViewModel,
+        nativeBridge: NativeBridge
+    ) {
+        val updateState by updaterViewModel.updateState.collectAsState()
+        val installedBundlePath by updaterViewModel.installedBundlePath.collectAsState()
+        val webVersion by updaterViewModel.currentVersion.collectAsState()
+        val snackbarHostState = remember { SnackbarHostState() }
+        val context = LocalContext.current
+        val scope = rememberCoroutineScope()
+        
+        var showSettings by remember { mutableStateOf(false) }
 
-                            Text(text = title, style = MaterialTheme.typography.bodySmall)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            if (progressValue != null) {
-                                LinearProgressIndicator(
-                                    progress = { progressValue },
-                                    modifier = Modifier.width(120.dp).height(2.dp)
-                                )
-                            } else {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                            }
-                        }
+        BackHandler(enabled = showSettings) {
+            showSettings = false
+        }
+
+        LaunchedEffect(updateState) {
+            when (updateState) {
+                is UpdateState.Error -> {
+                    snackbarHostState.showSnackbar(getString((updateState as UpdateState.Error).messageResId))
+                }
+                is UpdateState.UpToDate -> {
+                    if (showSettings) {
+                        snackbarHostState.showSnackbar(getString(R.string.snack_up_to_date))
                     }
                 }
+                else -> {}
             }
-            else -> {}
-        }
-    }
-
-    private fun requestRequiredPermissions() {
-        val permissions = mutableListOf(
-            Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.VIBRATE,
-            Manifest.permission.INTERNET,
-            Manifest.permission.ACCESS_NETWORK_STATE
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissions.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-            permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-            permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
 
-        requestPermissionLauncher.launch(permissions.toTypedArray())
+        // Restart Dialog
+        if (updateState is UpdateState.Success) {
+            RestartDialog(
+                onConfirm = { AppUtils.restartApp(context) },
+                onDismiss = { updaterViewModel.resetState() }
+            )
+        }
+
+        // Ready to Install Dialog
+        if (updateState is UpdateState.ReadyToInstall) {
+            val readyState = updateState as UpdateState.ReadyToInstall
+            ReadyToInstallDialog(
+                state = readyState,
+                onConfirm = {
+                    updaterViewModel.completeInstallation(readyState.versionInfo, readyState.zipFile)
+                },
+                onDismiss = { updaterViewModel.resetState() }
+            )
+        }
+
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = MaterialTheme.colorScheme.background,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        ) { paddingValues ->
+            Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                key(installedBundlePath) {
+                    HybridWebView(
+                        modifier = Modifier.fillMaxSize(),
+                        bridge = nativeBridge,
+                        localBundlePath = installedBundlePath
+                    )
+                }
+
+                Box(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
+                    SmallFloatingActionButton(
+                        onClick = { showSettings = true },
+                        modifier = Modifier.align(Alignment.TopEnd),
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                        contentColor = MaterialTheme.colorScheme.onSurface
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = showSettings,
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    SettingsScreen(
+                        appVersion = BuildConfig.VERSION_NAME,
+                        webVersion = webVersion ?: "Internal",
+                        onClose = { showSettings = false },
+                        onCheckUpdate = { updaterViewModel.checkAndUpdate(force = true) },
+                        onRestart = { AppUtils.restartApp(context) },
+                        onClearCache = {
+                            scope.launch {
+                                WebView(context).clearCache(true)
+                                snackbarHostState.showSnackbar(context.getString(R.string.settings_cache_cleared))
+                            }
+                        }
+                    )
+                }
+
+                UpdateOverlay(updateState)
+            }
+        }
     }
 }
