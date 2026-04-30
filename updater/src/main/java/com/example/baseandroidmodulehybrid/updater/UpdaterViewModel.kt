@@ -20,7 +20,7 @@ sealed class UpdateState {
     data class Extracting(val progress: Int)  : UpdateState()
     object Applying    : UpdateState()
     object Success     : UpdateState()
-    data class Error(val message: String) : UpdateState()
+    data class Error(val messageResId: Int) : UpdateState()
 }
 
 @HiltViewModel
@@ -47,7 +47,8 @@ class UpdaterViewModel @Inject constructor(
 
             val versionResult = repository.fetchVersionInfo()
             if (versionResult.isFailure) {
-                _updateState.value = UpdateState.Error("Помилка зв'язку")
+                // Use a resource ID instead of hardcoded string
+                _updateState.value = UpdateState.Error(com.example.baseandroidmodulehybrid.updater.R.string.error_connection)
                 return@launch
             }
 
@@ -64,7 +65,7 @@ class UpdaterViewModel @Inject constructor(
             }
             
             if (downloadResult.isFailure) {
-                _updateState.value = UpdateState.Error("Завантаження не вдалося")
+                _updateState.value = UpdateState.Error(com.example.baseandroidmodulehybrid.updater.R.string.error_download)
                 return@launch
             }
 
@@ -74,7 +75,6 @@ class UpdaterViewModel @Inject constructor(
 
     fun completeInstallation(versionInfo: VersionInfo, zipFile: File) {
         viewModelScope.launch {
-            // Змінюємо стан на Extracting, щоб закрити діалог у MainActivity
             _updateState.value = UpdateState.Extracting(0)
             
             val extractResult = repository.verifyAndExtract(
@@ -86,18 +86,17 @@ class UpdaterViewModel @Inject constructor(
             )
 
             if (extractResult.isFailure) {
-                _updateState.value = UpdateState.Error("Розпакування не вдалося")
+                _updateState.value = UpdateState.Error(com.example.baseandroidmodulehybrid.updater.R.string.error_extract)
                 return@launch
             }
 
             repository.saveCurrentVersion(versionInfo.version)
             
-            // Тригеримо оновлення шляху та версії
+            // Immediately update the path and version
             val newPath = repository.getLocalBundlePath()
             _currentVersion.value = versionInfo.version
             _installedBundlePath.value = newPath
             
-            // Тільки після того як всі дані оновлені — Success
             _updateState.value = UpdateState.Success
         }
     }

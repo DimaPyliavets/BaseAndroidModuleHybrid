@@ -15,7 +15,6 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -54,13 +53,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Робимо системні панелі прозорими
+        // Transparency for status and navigation bars
         enableEdgeToEdge()
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = true
-            isAppearanceLightNavigationBars = true
-        }
-
+        
         if (0 != (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE)) {
             WebView.setWebContentsDebuggingEnabled(true)
         }
@@ -78,16 +73,16 @@ class MainActivity : ComponentActivity() {
             val snackbarHostState = remember { SnackbarHostState() }
             val configuration = LocalConfiguration.current
             val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            var showMenu by remember { mutableStateOf(false) }
 
-            // Повідомлення для Snackbar
+            // Localization
             val successMsg = stringResource(R.string.snack_update_success)
             val upToDateMsg = stringResource(R.string.snack_up_to_date)
+            val errorMsg = stringResource(R.string.error_unknown)
 
             LaunchedEffect(updateState) {
                 when (updateState) {
                     is UpdateState.Error -> {
-                        snackbarHostState.showSnackbar((updateState as UpdateState.Error).message)
+                        snackbarHostState.showSnackbar(getString((updateState as UpdateState.Error).messageResId))
                     }
                     is UpdateState.Success -> {
                         snackbarHostState.showSnackbar(successMsg)
@@ -99,7 +94,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // Діалог підтвердження
             if (updateState is UpdateState.ReadyToInstall) {
                 val readyState = updateState as UpdateState.ReadyToInstall
                 AlertDialog(
@@ -128,44 +122,31 @@ class MainActivity : ComponentActivity() {
                             title = { 
                                 Text(
                                     stringResource(R.string.app_name),
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
+                                    style = MaterialTheme.typography.titleLarge
                                 ) 
                             },
                             actions = {
-                                IconButton(onClick = { showMenu = true }) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = null)
-                                }
-                                DropdownMenu(
-                                    expanded = showMenu,
-                                    onDismissRequest = { showMenu = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(R.string.menu_update)) },
-                                        onClick = {
-                                            showMenu = false
-                                            updaterViewModel.checkAndUpdate(force = true)
-                                        }
-                                    )
+                                TextButton(onClick = { updaterViewModel.checkAndUpdate(force = true) }) {
+                                    Text(stringResource(R.string.menu_update))
                                 }
                             },
                             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                                containerColor = Color.Transparent
+                                containerColor = Color.Transparent,
+                                scrolledContainerColor = Color.Transparent
                             )
                         )
                     }
                 },
                 snackbarHost = { SnackbarHost(snackbarHostState) },
-                contentWindowInsets = WindowInsets.statusBars
+                containerColor = MaterialTheme.colorScheme.background,
+                contentWindowInsets = WindowInsets(0, 0, 0, 0)
             ) { paddingValues ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(if (isLandscape) PaddingValues(0.dp) else paddingValues)
                 ) {
-                    key(installedBundlePath, currentVersion) {
+                    key(installedBundlePath) {
                         HybridWebView(
                             modifier = Modifier.fillMaxSize(),
                             bridge = nativeBridge,
@@ -173,15 +154,20 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    // Плаваюча кнопка для ландшафтного режиму
                     if (isLandscape) {
-                        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                            SmallFloatingActionButton(
+                        // Small floating Update button for landscape
+                        Box(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
+                            FilledTonalButton(
                                 onClick = { updaterViewModel.checkAndUpdate(force = true) },
-                                modifier = Modifier.align(Alignment.TopEnd).size(40.dp),
-                                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                                modifier = Modifier.align(Alignment.TopEnd).height(32.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+                                )
                             ) {
-                                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text(stringResource(R.string.menu_update), fontSize = 10.sp)
                             }
                         }
                     }
@@ -199,16 +185,16 @@ class MainActivity : ComponentActivity() {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.4f)),
+                        .background(Color.Black.copy(alpha = 0.3f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Surface(
-                        shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 4.dp
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                        tonalElevation = 2.dp
                     ) {
                         Column(
-                            modifier = Modifier.padding(24.dp),
+                            modifier = Modifier.padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             val title = when (state) {
@@ -224,18 +210,16 @@ class MainActivity : ComponentActivity() {
                                 else -> null
                             }
 
-                            Text(text = title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium))
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(text = title, style = MaterialTheme.typography.bodySmall)
+                            Spacer(modifier = Modifier.height(12.dp))
                             
                             if (progressValue != null) {
                                 LinearProgressIndicator(
                                     progress = { progressValue },
-                                    modifier = Modifier.width(160.dp).height(4.dp)
+                                    modifier = Modifier.width(120.dp).height(2.dp)
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(text = "${(progressValue * 100).toInt()}%", fontSize = 12.sp)
                             } else {
-                                CircularProgressIndicator(modifier = Modifier.size(32.dp), strokeWidth = 3.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                             }
                         }
                     }
@@ -249,11 +233,19 @@ class MainActivity : ComponentActivity() {
         val permissions = mutableListOf(
             Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.VIBRATE
+            Manifest.permission.VIBRATE,
+            Manifest.permission.INTERNET,
+            Manifest.permission.ACCESS_NETWORK_STATE
         )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
+        // Memory (Storage) permissions for older Android versions
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+
         requestPermissionLauncher.launch(permissions.toTypedArray())
     }
 }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_name">Hybrid Widget</string>
+    <string name="widget_description">Displays actual data from the application</string>
+    <string name="widget_no_data">No data</string>
+    <string name="widget_sync_hint">Sync from app</string>
+</resources>

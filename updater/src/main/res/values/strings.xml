@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error_connection">Connection error</string>
+    <string name="error_download">Download failed</string>
+    <string name="error_install">Installation failed</string>
+    <string name="error_extract">Extraction failed</string>
+</resources>

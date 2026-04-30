@@ -3,110 +3,75 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sheet App</title>
+<title>Hybrid Sheet App</title>
 
-<link rel="manifest" href="manifest.json">
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 :root {
-  --accent: #0078d4;
-  --bg: #f3f3f3;
-  --card: #ffffff;
-  --text: #111;
+  --accent:#0078d4;
+  --bg:#f3f3f3;
+  --card:#fff;
+  --text:#111;
 }
 
 body.dark {
-  --bg: #1b1b1b;
-  --card: #2a2a2a;
-  --text: #fff;
+  --bg:#1b1b1b;
+  --card:#2a2a2a;
+  --text:#fff;
 }
 
 body {
   margin:0;
-  font-family: "Segoe UI", sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  font-family:"Segoe UI", sans-serif;
+  background:var(--bg);
+  color:var(--text);
 }
 
-/* HEADER */
+/* UI */
 .header {
   display:flex;
-  gap:10px;
-  padding:12px;
-  background: var(--card);
-  position: sticky;
-  top:0;
-  z-index:10;
+  flex-wrap:wrap;
+  gap:8px;
+  padding:10px;
+  background:var(--card);
 }
 
-.btn {
+button {
+  padding:10px;
   border:none;
-  padding:10px 14px;
-  background: var(--accent);
-  color:white;
-  cursor:pointer;
+  background:var(--accent);
+  color:#fff;
   border-radius:4px;
 }
 
-.btn.secondary { background:#666; }
-.btn.danger { background:#d83b01; }
-.btn.light { background:#e1e1e1; color:#000; }
+button.secondary { background:#666; }
+button.light { background:#ddd; color:#000; }
+button.danger { background:#d83b01; }
 
-/* TABLE */
-.container {
-  padding:10px;
-}
+.container { padding:10px; }
 
 .table-wrap {
   overflow:auto;
   background:var(--card);
-  border-radius:6px;
 }
 
-table {
-  border-collapse: collapse;
-  width:100%;
-}
-
-th, td {
+table { border-collapse:collapse; width:100%; }
+td, th {
   border:1px solid #ccc;
   padding:8px;
-  min-width:120px;
+  min-width:100px;
 }
 
-td {
-  background: var(--card);
-}
-
-td[contenteditable] {
-  outline:none;
-}
-
-/* FILTERS */
 .filters {
   display:flex;
   gap:6px;
   overflow:auto;
-  padding:6px 0;
+  margin-bottom:6px;
 }
 
 .filters input {
   padding:6px;
-  border:1px solid #ccc;
-  border-radius:4px;
-}
-
-/* MOBILE */
-@media (max-width:600px) {
-  .header {
-    flex-wrap: wrap;
-  }
-
-  th, td {
-    min-width:100px;
-    font-size:14px;
-  }
 }
 </style>
 </head>
@@ -116,11 +81,16 @@ td[contenteditable] {
 <div class="header">
 <input type="file" id="fileInput">
 
-<button class="btn" onclick="createSheet()">New</button>
-<button class="btn" onclick="exportExcel()">Export</button>
-<button class="btn secondary" onclick="printTable()">Print</button>
-<button class="btn light" onclick="toggleDark()">Theme</button>
-<button class="btn light" onclick="saveData()">Save</button>
+<button onclick="createSheet()">New</button>
+<button onclick="exportExcel()">Export</button>
+<button onclick="printTable()">Print</button>
+<button class="light" onclick="toggleDark()">Theme</button>
+<button class="light" onclick="saveData()">Save</button>
+
+<button class="secondary" onclick="notify()">Notify</button>
+<button class="secondary" onclick="vibrate()">Vibrate</button>
+<button class="secondary" onclick="getDevice()">Device</button>
+<button class="secondary" onclick="syncToNative()">Sync</button>
 </div>
 
 <div class="container">
@@ -128,43 +98,80 @@ td[contenteditable] {
 <div class="filters" id="filters"></div>
 
 <div class="table-wrap">
-<table id="sheet">
+<table>
 <thead><tr id="headerRow"></tr></thead>
 <tbody id="body"></tbody>
 </table>
 </div>
 
 <div style="margin-top:10px; display:flex; gap:10px;">
-<button class="btn" onclick="addRow()">Add</button>
-<button class="btn danger" onclick="deleteRow()">Delete</button>
+<button onclick="addRow()">Add</button>
+<button class="danger" onclick="deleteRow()">Delete</button>
 </div>
 
 </div>
 
 <script>
-let data = [];
-let filteredData = [];
-let headers = [];
-let selectedRow = null;
+let data=[];
+let filteredData=[];
+let headers=[];
+let selectedRow=null;
 
-/* INIT */
-window.onload = () => {
-  loadData();
-  renderAll();
-};
+/* ---------- ANDROID BRIDGE SAFE ---------- */
+function isAndroid(){
+  return typeof window.Android !== "undefined";
+}
 
-/* RENDER */
+/* ---------- NATIVE CALLS ---------- */
+function notify(){
+  if(isAndroid()){
+    window.Android.showNotification("Sheet App","Action executed");
+  } else {
+    alert("Notification test");
+  }
+}
+
+function vibrate(){
+  if(isAndroid()){
+    window.Android.vibrate(200);
+  } else {
+    navigator.vibrate?.(200);
+  }
+}
+
+function getDevice(){
+  if(isAndroid()){
+    let info=JSON.parse(window.Android.getDeviceInfo());
+    alert("Model: "+info.model+"\nAndroid: "+info.androidVersion);
+  } else {
+    alert("Browser mode");
+  }
+}
+
+function syncToNative(){
+  const payload={
+    title:"Rows: "+data.length,
+    subtitle:"Last sync "+Date.now()
+  };
+
+  if(isAndroid()){
+    window.Android.syncData(JSON.stringify(payload));
+    notify();
+  }
+}
+
+/* ---------- TABLE ---------- */
 function renderAll(){
   renderFilters();
   applyFilters();
 }
 
 function renderTable(){
-  const body = document.getElementById("body");
-  const headerRow = document.getElementById("headerRow");
+  const body=document.getElementById("body");
+  const headerRow=document.getElementById("headerRow");
 
-  headerRow.innerHTML = "";
-  body.innerHTML = "";
+  body.innerHTML="";
+  headerRow.innerHTML="";
 
   headers.forEach(h=>{
     let th=document.createElement("th");
@@ -193,7 +200,7 @@ function renderTable(){
   });
 }
 
-/* FILTERS */
+/* ---------- FILTER ---------- */
 function renderFilters(){
   let container=document.getElementById("filters");
   container.innerHTML="";
@@ -214,14 +221,14 @@ function applyFilters(){
     return [...inputs].every(inp=>{
       let val=inp.value.toLowerCase();
       if(!val) return true;
-      return (row[inp.dataset.index]||"").toString().toLowerCase().includes(val);
+      return (row[inp.dataset.index]||"").toLowerCase().includes(val);
     });
   });
 
   renderTable();
 }
 
-/* CRUD */
+/* ---------- CRUD ---------- */
 function addRow(){
   data.push(Array(headers.length).fill(""));
   renderAll();
@@ -237,103 +244,103 @@ function deleteRow(){
 }
 
 function createSheet(){
-  headers = ["Column 1","Column 2","Column 3"];
-  data = [];
+  headers=["Column 1","Column 2"];
+  data=[];
   renderAll();
 }
 
-/* SAVE LOCAL */
-function saveData(){
-  localStorage.setItem("sheet", JSON.stringify({headers,data}));
-}
+/* ---------- FILE ---------- */
+fileInput.onchange=e=>{
+  let reader=new FileReader();
 
-/* LOAD */
-function loadData(){
-  let saved = localStorage.getItem("sheet");
-  if(saved){
-    let parsed = JSON.parse(saved);
-    headers = parsed.headers || [];
-    data = parsed.data || [];
-  }
-  filteredData = data;
-}
+  reader.onload=evt=>{
+    let wb=XLSX.read(evt.target.result,{type:"binary"});
+    let sheet=wb.Sheets[wb.SheetNames[0]];
+    let json=XLSX.utils.sheet_to_json(sheet,{header:1});
 
-/* IMPORT FILE */
-fileInput.onchange = e => {
-  let reader = new FileReader();
+    if(!json.length) return;
 
-  reader.onload = evt => {
-    let wb = XLSX.read(evt.target.result, { type: "binary" });
-    let sheet = wb.Sheets[wb.SheetNames[0]];
-    let json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
-    if(json.length === 0) return;
-
-    let firstRow = json[0];
-    let isHeader = firstRow.some(cell => isNaN(cell));
+    let first=json[0];
+    let isHeader=first.some(x=>isNaN(x));
 
     if(isHeader){
-      headers = firstRow.map(h => h || "Column");
-      data = json.slice(1);
+      headers=first;
+      data=json.slice(1);
     } else {
-      headers = firstRow.map((_,i)=>"Column "+(i+1));
-      data = json;
+      headers=first.map((_,i)=>"Column "+(i+1));
+      data=json;
     }
 
-    normalizeData();
+    normalize();
     renderAll();
   };
 
   reader.readAsBinaryString(e.target.files[0]);
 };
 
-/* NORMALIZE */
-function normalizeData(){
-  const cols = headers.length;
+function normalize(){
+  let cols=headers.length;
 
-  data = data.map(row=>{
-    let r=[...row];
-    while(r.length < cols) r.push("");
-    return r.slice(0, cols);
+  data=data.map(r=>{
+    let row=[...r];
+    while(row.length<cols) row.push("");
+    return row.slice(0,cols);
   });
 }
 
-/* EXPORT FILE */
+/* ---------- EXPORT ---------- */
 function exportExcel(){
-  let ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
-  let wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Sheet");
-  XLSX.writeFile(wb, "data.xlsx");
+  let ws=XLSX.utils.aoa_to_sheet([headers,...data]);
+  let wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Sheet");
+  XLSX.writeFile(wb,"data.xlsx");
 }
 
-/* PRINT (mobile friendly) */
+/* ---------- PRINT ---------- */
 function printTable(){
-  let html = "<table border='1'>";
-  html += "<tr>"+headers.map(h=>"<th>"+h+"</th>").join("")+"</tr>";
-  data.forEach(r=>{
-    html += "<tr>"+r.map(c=>"<td>"+c+"</td>").join("")+"</tr>";
-  });
-  html += "</table>";
+  let html="<table border='1'>";
+  html+="<tr>"+headers.map(h=>"<th>"+h+"</th>").join("")+"</tr>";
 
-  let win = window.open("");
-  win.document.write(html);
-  win.print();
+  data.forEach(r=>{
+    html+="<tr>"+r.map(c=>"<td>"+c+"</td>").join("")+"</tr>";
+  });
+
+  html+="</table>";
+
+  let w=window.open("");
+  w.document.write(html);
+  w.print();
 }
 
-/* THEME */
+/* ---------- STORAGE ---------- */
+function saveData(){
+  localStorage.setItem("sheet",JSON.stringify({headers,data}));
+
+  if(isAndroid()){
+    notify();
+  }
+}
+
+function loadData(){
+  let s=localStorage.getItem("sheet");
+  if(s){
+    let p=JSON.parse(s);
+    headers=p.headers||[];
+    data=p.data||[];
+  }
+  filteredData=data;
+}
+
+/* ---------- THEME ---------- */
 function toggleDark(){
   document.body.classList.toggle("dark");
-  localStorage.setItem("dark", document.body.classList.contains("dark"));
 }
 
-if(localStorage.getItem("dark")==="true"){
-  document.body.classList.add("dark");
-}
-
-/* PWA */
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("sw.js");
-}
+/* INIT */
+window.onload=()=>{
+  loadData();
+  renderAll();
+};
 </script>
 
 </body>

@@ -1,5 +1,6 @@
 package com.example.baseandroidmodulehybrid.bridge
 
+import android.Manifest
 import android.content.Context
 import android.hardware.camera2.CameraManager
 import android.os.Build
@@ -7,6 +8,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.webkit.JavascriptInterface
+import androidx.annotation.RequiresPermission
 import com.example.baseandroidmodulehybrid.core.model.AppConfig
 import com.example.baseandroidmodulehybrid.core.model.WidgetDataDao
 import com.example.baseandroidmodulehybrid.core.model.WidgetDataEntity
@@ -52,6 +54,7 @@ class NativeBridge @Inject constructor(
         notificationHelper.show(safeTitle, safeMessage)
     }
 
+    @RequiresPermission(Manifest.permission.VIBRATE)
     @JavascriptInterface
     fun vibrate(milliseconds: Long) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
